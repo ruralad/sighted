@@ -18,6 +18,7 @@ interface QuestionStore {
   totalQuestions: number;
   hydrate: (completed: Set<number>) => Promise<void>;
   nextQuestion: (completed: Set<number>) => void;
+  selectQuestion: (id: number) => void;
 }
 
 let didHydrate = false;
@@ -53,6 +54,14 @@ export const useQuestionStore = create<QuestionStore>((setState) => ({
       setCurrentQuestion(picked.id);
     } else {
       setCurrentQuestion(null);
+    }
+  },
+
+  selectQuestion: (id: number) => {
+    const found = allQuestions.find((q) => q.id === id);
+    if (found) {
+      setState({ question: found });
+      setCurrentQuestion(found.id);
     }
   },
 }));

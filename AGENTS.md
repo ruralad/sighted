@@ -2,7 +2,7 @@
 
 ## Project Overview
 
-Sighted 75 is a single-page React app for practicing LeetCode-style coding questions (the "Blind 75" set). It features an in-browser code editor (CodeMirror 6), JavaScript/Python execution, Go/Java scaffold-only support, completion tracking via IndexedDB, and a multi-palette dark/light theme system.
+Sighted 75 is a single-page React app for practicing LeetCode-style coding questions (the "Blind 75" set). It features an in-browser code editor (CodeMirror 6), JavaScript/Python execution, Go/Java/Rust/C/C++ scaffold-only support, completion tracking via IndexedDB, and a multi-palette dark/light theme system.
 
 ## Tech Stack
 
@@ -32,15 +32,17 @@ src/
 ├── main.tsx                  # Entry point, renders <App /> in StrictMode
 ├── App.tsx                   # Root component, hydrates stores, orchestrates layout
 ├── components/               # Presentational components
-│   ├── CodeEditor.tsx        # CodeMirror 6 wrapper with dynamic theming
+│   ├── CodeEditor.tsx        # CodeMirror 6 wrapper with dynamic theming + user-configurable extensions
 │   ├── HintPanel.tsx         # Progressive hint reveal
-│   ├── LanguageSelector.tsx  # JS/Python/Go/Java tab selector
+│   ├── LanguageSelector.tsx  # Language tab selector (JS/Python/Go/Java active; Rust/C/C++ scaffolded)
 │   ├── OutputPanel.tsx       # Code execution output display
 │   ├── ProgressBar.tsx       # Completion progress indicator
 │   ├── QuestionCard.tsx      # Question display with examples
-│   └── SettingsModal.tsx     # Theme/palette settings modal
+│   ├── QuestionsModal.tsx    # All-questions table modal with filters/sort
+│   └── SettingsModal.tsx     # Tabbed settings modal (Theme / Editor / Account)
 ├── store/                    # Zustand stores + IndexedDB layer
 │   ├── themeStore.ts         # Theme mode (dark/light) + palette (emerald/ocean/amber)
+│   ├── editorStore.ts        # Editor preferences (font, indentation, feature toggles)
 │   ├── completionStore.ts    # Question completion tracking
 │   ├── questionStore.ts      # Current question selection
 │   ├── codeRunnerStore.ts    # Code execution state
@@ -51,7 +53,7 @@ src/
 │   ├── pythonRunner.ts       # In-browser Python via Pyodide (lazy-loaded)
 │   └── goRunner.ts           # Stub — Go not supported in browser
 ├── data/
-│   └── questions.json        # Question bank (5 questions)
+│   └── questions.json        # Question bank (75 Blind questions with keywords + 7-language scaffolds)
 ├── types/
 │   └── question.ts           # TypeScript interfaces
 └── styles/
@@ -104,7 +106,7 @@ CodeMirror theming reads CSS variables at editor creation time via `readCSSVar()
 
 ### IndexedDB Keys
 
-All keys are prefixed with `sighted75:` (e.g., `sighted75:completed`, `sighted75:theme`).
+All keys are prefixed with `sighted75:` (e.g., `sighted75:completed`, `sighted75:theme`, `sighted75:editor`).
 
 ### Typography
 

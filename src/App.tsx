@@ -4,6 +4,7 @@ import { useThemeStore } from "./store/themeStore";
 import { useCompletionStore } from "./store/completionStore";
 import { useQuestionStore } from "./store/questionStore";
 import { useCodeRunnerStore } from "./store/codeRunnerStore";
+import { useEditorStore } from "./store/editorStore";
 import { saveSolution } from "./store/db";
 import { ProgressBar } from "./components/ProgressBar";
 import { QuestionCard } from "./components/QuestionCard";
@@ -11,8 +12,20 @@ import { LanguageSelector } from "./components/LanguageSelector";
 import { CodeEditor } from "./components/CodeEditor";
 import { OutputPanel } from "./components/OutputPanel";
 import { SettingsModal } from "./components/SettingsModal";
+import { QuestionsModal } from "./components/QuestionsModal";
 
 // Hoisted outside component to avoid re-creating SVG elements on every render
+const listIcon = (
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <line x1="8" y1="6" x2="21" y2="6" />
+    <line x1="8" y1="12" x2="21" y2="12" />
+    <line x1="8" y1="18" x2="21" y2="18" />
+    <line x1="3" y1="6" x2="3.01" y2="6" />
+    <line x1="3" y1="12" x2="3.01" y2="12" />
+    <line x1="3" y1="18" x2="3.01" y2="18" />
+  </svg>
+);
+
 const gearIcon = (
   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <circle cx="12" cy="12" r="3" />
@@ -36,6 +49,9 @@ export function App() {
   const questionLoading = useQuestionStore((s) => s.loading);
   const hydrateQuestion = useQuestionStore((s) => s.hydrate);
 
+  const editorLoaded = useEditorStore((s) => s.loaded);
+  const hydrateEditor = useEditorStore((s) => s.hydrate);
+
   useEffect(() => {
     hydrateTheme();
   }, [hydrateTheme]);
@@ -43,6 +59,10 @@ export function App() {
   useEffect(() => {
     hydrateCompletion();
   }, [hydrateCompletion]);
+
+  useEffect(() => {
+    hydrateEditor();
+  }, [hydrateEditor]);
 
   // Track completed set via ref so questionStore.hydrate() gets the latest
   // value without adding `completed` as a dependency (which would re-trigger hydration)
@@ -58,7 +78,7 @@ export function App() {
     hydrateQuestion(completedRef.current);
   }, [completionLoading, hydrateQuestion]);
 
-  if (!themeLoaded || completionLoading || questionLoading) {
+  if (!themeLoaded || completionLoading || questionLoading || !editorLoaded) {
     return loadingSpinner;
   }
 
@@ -73,6 +93,7 @@ function AppInner() {
   const question = useQuestionStore((s) => s.question);
   const totalQuestions = useQuestionStore((s) => s.totalQuestions);
   const nextQuestionAction = useQuestionStore((s) => s.nextQuestion);
+  const selectQuestion = useQuestionStore((s) => s.selectQuestion);
 
   const running = useCodeRunnerStore((s) => s.running);
   const result = useCodeRunnerStore((s) => s.result);
@@ -83,9 +104,12 @@ function AppInner() {
   const themeMode = useThemeStore((s) => s.theme.mode);
   const themePalette = useThemeStore((s) => s.theme.palette);
 
+  const editorSettings = useEditorStore((s) => s.settings);
+
   const [language, setLanguage] = useState<Language>("javascript");
   const [showResetConfirm, setShowResetConfirm] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
+  const [showQuestions, setShowQuestions] = useState(false);
   // Stores editor content in a ref to avoid re-renders on every keystroke
   const codeRef = useRef("");
 
@@ -95,9 +119,11 @@ function AppInner() {
     codeRef.current = scaffoldCode;
   }, [scaffoldCode]);
 
-  // Forces CodeEditor to fully remount when question, language, or theme changes.
+  // Forces CodeEditor to fully remount when question, language, theme, or editor settings change.
   // CM6 doesn't support dynamic reconfiguration of themes, so a fresh instance is needed.
-  const editorKey = question ? `${question.id}-${language}-${themeMode}-${themePalette}` : "empty";
+  const editorKey = question
+    ? `${question.id}-${language}-${themeMode}-${themePalette}-${JSON.stringify(editorSettings)}`
+    : "empty";
 
   const handleCodeChange = useCallback((code: string) => {
     codeRef.current = code;
@@ -138,8 +164,19 @@ function AppInner() {
 
   const openSettings = useCallback(() => setShowSettings(true), []);
   const closeSettings = useCallback(() => setShowSettings(false), []);
+  const openQuestions = useCallback(() => setShowQuestions(true), []);
+  const closeQuestions = useCallback(() => setShowQuestions(false), []);
   const openResetConfirm = useCallback(() => setShowResetConfirm(true), []);
   const closeResetConfirm = useCallback(() => setShowResetConfirm(false), []);
+
+  const handleSelectQuestion = useCallback(
+    (id: number) => {
+      selectQuestion(id);
+      clearResult();
+      codeRef.current = "";
+    },
+    [selectQuestion, clearResult],
+  );
 
   if (!question) {
     return (
@@ -182,6 +219,14 @@ function AppInner() {
           <ProgressBar completed={completed.size} total={totalQuestions} />
         </div>
         <div className="topbar__actions">
+          <button
+            className="topbar__settings-btn"
+            onClick={openQuestions}
+            aria-label="All Questions"
+            title="All Questions"
+          >
+            {listIcon}
+          </button>
           <button
             className="topbar__settings-btn"
             onClick={openSettings}
@@ -234,6 +279,7 @@ function AppInner() {
               language={language}
               initialCode={scaffoldCode}
               themeMode={themeMode}
+              editorSettings={editorSettings}
               onCodeChange={handleCodeChange}
               onRun={handleRun}
             />
@@ -259,6 +305,13 @@ function AppInner() {
       ) : null}
 
       <SettingsModal open={showSettings} onClose={closeSettings} />
+      <QuestionsModal
+        open={showQuestions}
+        onClose={closeQuestions}
+        completed={completed}
+        currentQuestionId={question?.id ?? null}
+        onSelectQuestion={handleSelectQuestion}
+      />
     </div>
   );
 }

@@ -9,9 +9,12 @@ export interface Scaffolds {
   javascript: string;
   go: string;
   java: string;
+  rust: string;
+  c: string;
+  cpp: string;
 }
 
-export type Language = "python" | "javascript" | "go" | "java";
+export type Language = "python" | "javascript" | "go" | "java" | "rust" | "c" | "cpp";
 
 export interface Question {
   id: number;
@@ -21,6 +24,7 @@ export interface Question {
   category: string;
   description: string;
   examples: Example[];
+  keywords: string[];
   hints: [string, string, string];
   scaffolds: Scaffolds;
 }

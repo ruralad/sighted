@@ -1,4 +1,4 @@
 - Auth and save state: questions completed, completed date, attempts, revisits and more.
 - Notes on questions
 - Join a group with unique group link: see how many others solved and leaderboard and all
-- Remote code execution for java, golang and rust.
+- Remote code execution for java, golang and rust. Questions and scaffold already in place.

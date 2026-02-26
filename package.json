@@ -9,6 +9,7 @@
     "lint": "oxlint src/"
   },
   "dependencies": {
+    "@babel/runtime": "^7.28.6",
     "@codemirror/lang-go": "^6.0.1",
     "@codemirror/lang-java": "^6.0.2",
     "@codemirror/lang-javascript": "^6.2.3",
@@ -16,6 +17,7 @@
     "@codemirror/state": "^6.5.2",
     "@codemirror/theme-one-dark": "^6.1.2",
     "@codemirror/view": "^6.36.5",
+    "@uiw/codemirror-themes-all": "^4.25.5",
     "codemirror": "^6.0.1",
     "idb-keyval": "^6.2.1",
     "react": "^19.0.0",
