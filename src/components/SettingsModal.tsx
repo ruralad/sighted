@@ -181,6 +181,26 @@ function EditorTab() {
             ))}
           </select>
         </div>
+
+        <div className="settings-row">
+          <div className="settings-row__info">
+            <span className="settings-row__name">Adapt App Theme</span>
+            <span className="settings-row__desc">
+              {settings.editorTheme === "auto"
+                ? "Select a syntax theme first to enable"
+                : "Match the entire app to the editor theme"}
+            </span>
+          </div>
+          <label className="settings-toggle">
+            <input
+              type="checkbox"
+              checked={settings.adaptAppTheme}
+              disabled={settings.editorTheme === "auto"}
+              onChange={(e) => update("adaptAppTheme", e.target.checked)}
+            />
+            <span className="settings-toggle__track" />
+          </label>
+        </div>
       </section>
 
       <section className="settings-section">

@@ -6,6 +6,7 @@ import { useQuestionStore } from "./store/questionStore";
 import { useCodeRunnerStore } from "./store/codeRunnerStore";
 import { useEditorStore } from "./store/editorStore";
 import { saveSolution } from "./store/db";
+import { applyAppThemeOverride } from "./themes/editorThemeColors";
 import { ProgressBar } from "./components/ProgressBar";
 import { QuestionCard } from "./components/QuestionCard";
 import { LanguageSelector } from "./components/LanguageSelector";
@@ -63,6 +64,15 @@ export function App() {
   useEffect(() => {
     hydrateEditor();
   }, [hydrateEditor]);
+
+  const editorTheme = useEditorStore((s) => s.settings.editorTheme);
+  const adaptAppTheme = useEditorStore((s) => s.settings.adaptAppTheme);
+
+  useEffect(() => {
+    if (!editorLoaded) return;
+    applyAppThemeOverride(editorTheme, adaptAppTheme);
+    return () => applyAppThemeOverride("auto", false);
+  }, [editorLoaded, editorTheme, adaptAppTheme]);
 
   // Track completed set via ref so questionStore.hydrate() gets the latest
   // value without adding `completed` as a dependency (which would re-trigger hydration)

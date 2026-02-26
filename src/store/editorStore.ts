@@ -57,6 +57,7 @@ export interface EditorSettings {
   lineWrapping: boolean;
   scrollPastEnd: boolean;
   editorTheme: EditorThemeId;
+  adaptAppTheme: boolean;
 }
 
 const EDITOR_KEY = "sighted75:editor";
@@ -77,6 +78,7 @@ export const DEFAULT_EDITOR: EditorSettings = {
   lineWrapping: false,
   scrollPastEnd: false,
   editorTheme: "auto",
+  adaptAppTheme: false,
 };
 
 // Metadata for the theme picker UI — grouped by variant for easier browsing
