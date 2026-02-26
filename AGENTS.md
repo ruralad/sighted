@@ -2,7 +2,7 @@
 
 ## Project Overview
 
-Sighted 75 is a single-page React app for practicing LeetCode-style coding questions (the "Blind 75" set). It features an in-browser code editor (CodeMirror 6), JavaScript/Python execution, completion tracking via IndexedDB, and a multi-palette dark/light theme system.
+Sighted 75 is a single-page React app for practicing LeetCode-style coding questions (the "Blind 75" set). It features an in-browser code editor (CodeMirror 6), JavaScript/Python execution, Go/Java scaffold-only support, completion tracking via IndexedDB, and a multi-palette dark/light theme system.
 
 ## Tech Stack
 
@@ -34,7 +34,7 @@ src/
 ├── components/               # Presentational components
 │   ├── CodeEditor.tsx        # CodeMirror 6 wrapper with dynamic theming
 │   ├── HintPanel.tsx         # Progressive hint reveal
-│   ├── LanguageSelector.tsx  # JS/Python/Go tab selector
+│   ├── LanguageSelector.tsx  # JS/Python/Go/Java tab selector
 │   ├── OutputPanel.tsx       # Code execution output display
 │   ├── ProgressBar.tsx       # Completion progress indicator
 │   ├── QuestionCard.tsx      # Question display with examples
@@ -46,6 +46,7 @@ src/
 │   ├── codeRunnerStore.ts    # Code execution state
 │   └── db.ts                 # IndexedDB persistence functions
 ├── runners/                  # Language-specific code execution
+│   ├── javaRunner.ts         # Stub — Java not supported in browser (like Go)
 │   ├── jsRunner.ts           # In-browser JS execution via Function()
 │   ├── pythonRunner.ts       # In-browser Python via Pyodide (lazy-loaded)
 │   └── goRunner.ts           # Stub — Go not supported in browser

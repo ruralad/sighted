@@ -14,8 +14,7 @@
    THEME TOKENS — Dark Mode
    ============================================================ */
 
-/* --- Emerald Dark (default) --- */
-:root,
+/* --- Emerald Dark --- */
 [data-mode="dark"][data-palette="emerald"] {
   --bg-deep: #0F172A;
   --bg-primary: #1E293B;
@@ -179,7 +178,8 @@
   --cm-selection-bg: rgba(37, 99, 235, 0.15);
 }
 
-/* --- Amber Light --- */
+/* --- Amber Light (default) --- */
+:root,
 [data-mode="light"][data-palette="amber"] {
   --bg-deep: #FFFBF0;
   --bg-primary: #FFFFFF;
@@ -217,17 +217,6 @@
    ============================================================ */
 
 :root,
-[data-mode="dark"] {
-  --green: #22C55E;
-  --green-dim: rgba(34, 197, 94, 0.15);
-  --yellow: #EAB308;
-  --yellow-dim: rgba(234, 179, 8, 0.12);
-  --red: #EF4444;
-  --red-dim: rgba(239, 68, 68, 0.12);
-  --blue: #3B82F6;
-  --blue-dim: rgba(59, 130, 246, 0.12);
-}
-
 [data-mode="light"] {
   --green: #16A34A;
   --green-dim: rgba(22, 163, 74, 0.1);
@@ -237,6 +226,17 @@
   --red-dim: rgba(220, 38, 38, 0.1);
   --blue: #2563EB;
   --blue-dim: rgba(37, 99, 235, 0.1);
+}
+
+[data-mode="dark"] {
+  --green: #22C55E;
+  --green-dim: rgba(34, 197, 94, 0.15);
+  --yellow: #EAB308;
+  --yellow-dim: rgba(234, 179, 8, 0.12);
+  --red: #EF4444;
+  --red-dim: rgba(239, 68, 68, 0.12);
+  --blue: #3B82F6;
+  --blue-dim: rgba(59, 130, 246, 0.12);
 }
 
 /* ============================================================
@@ -268,10 +268,10 @@ html, body, #root {
 }
 
 html {
-  color-scheme: dark;
-}
-[data-mode="light"] {
   color-scheme: light;
+}
+[data-mode="dark"] {
+  color-scheme: dark;
 }
 
 body {

@@ -29,7 +29,8 @@
     "scaffolds": {
       "python": "def twoSum(nums, target):\n    # Return indices of two numbers that add up to target\n    pass\n\n# Example usage:\nprint(twoSum([2, 7, 11, 15], 9))",
       "javascript": "function twoSum(nums, target) {\n  // Return indices of two numbers that add up to target\n}\n\n// Example usage:\nconsole.log(twoSum([2, 7, 11, 15], 9));",
-      "go": "package main\n\nimport \"fmt\"\n\nfunc twoSum(nums []int, target int) []int {\n\t// Return indices of two numbers that add up to target\n\treturn nil\n}\n\nfunc main() {\n\tfmt.Println(twoSum([]int{2, 7, 11, 15}, 9))\n}"
+      "go": "package main\n\nimport \"fmt\"\n\nfunc twoSum(nums []int, target int) []int {\n\t// Return indices of two numbers that add up to target\n\treturn nil\n}\n\nfunc main() {\n\tfmt.Println(twoSum([]int{2, 7, 11, 15}, 9))\n}",
+      "java": "import java.util.*;\n\npublic class Solution {\n    public static int[] twoSum(int[] nums, int target) {\n        // Return indices of two numbers that add up to target\n        return new int[]{};\n    }\n\n    public static void main(String[] args) {\n        System.out.println(Arrays.toString(twoSum(new int[]{2, 7, 11, 15}, 9)));\n    }\n}"
     }
   },
   {
@@ -61,7 +62,8 @@
     "scaffolds": {
       "python": "def isValid(s):\n    # Return True if the string has valid parentheses\n    pass\n\n# Example usage:\nprint(isValid(\"()[]{}\"))",
       "javascript": "function isValid(s) {\n  // Return true if the string has valid parentheses\n}\n\n// Example usage:\nconsole.log(isValid(\"()[]{}\"));",
-      "go": "package main\n\nimport \"fmt\"\n\nfunc isValid(s string) bool {\n\t// Return true if the string has valid parentheses\n\treturn false\n}\n\nfunc main() {\n\tfmt.Println(isValid(\"()[]{}\"))\n}"
+      "go": "package main\n\nimport \"fmt\"\n\nfunc isValid(s string) bool {\n\t// Return true if the string has valid parentheses\n\treturn false\n}\n\nfunc main() {\n\tfmt.Println(isValid(\"()[]{}\"))\n}",
+      "java": "import java.util.*;\n\npublic class Solution {\n    public static boolean isValid(String s) {\n        // Return true if the string has valid parentheses\n        return false;\n    }\n\n    public static void main(String[] args) {\n        System.out.println(isValid(\"()[]{}\"));\n    }\n}"
     }
   },
   {
@@ -96,7 +98,8 @@
     "scaffolds": {
       "python": "def maxSubArray(nums):\n    # Return the sum of the maximum subarray\n    pass\n\n# Example usage:\nprint(maxSubArray([-2, 1, -3, 4, -1, 2, 1, -5, 4]))",
       "javascript": "function maxSubArray(nums) {\n  // Return the sum of the maximum subarray\n}\n\n// Example usage:\nconsole.log(maxSubArray([-2, 1, -3, 4, -1, 2, 1, -5, 4]));",
-      "go": "package main\n\nimport \"fmt\"\n\nfunc maxSubArray(nums []int) int {\n\t// Return the sum of the maximum subarray\n\treturn 0\n}\n\nfunc main() {\n\tfmt.Println(maxSubArray([]int{-2, 1, -3, 4, -1, 2, 1, -5, 4}))\n}"
+      "go": "package main\n\nimport \"fmt\"\n\nfunc maxSubArray(nums []int) int {\n\t// Return the sum of the maximum subarray\n\treturn 0\n}\n\nfunc main() {\n\tfmt.Println(maxSubArray([]int{-2, 1, -3, 4, -1, 2, 1, -5, 4}))\n}",
+      "java": "public class Solution {\n    public static int maxSubArray(int[] nums) {\n        // Return the sum of the maximum subarray\n        return 0;\n    }\n\n    public static void main(String[] args) {\n        System.out.println(maxSubArray(new int[]{-2, 1, -3, 4, -1, 2, 1, -5, 4}));\n    }\n}"
     }
   },
   {
@@ -126,7 +129,8 @@
     "scaffolds": {
       "python": "def climbStairs(n):\n    # Return the number of distinct ways to climb n stairs\n    pass\n\n# Example usage:\nprint(climbStairs(5))",
       "javascript": "function climbStairs(n) {\n  // Return the number of distinct ways to climb n stairs\n}\n\n// Example usage:\nconsole.log(climbStairs(5));",
-      "go": "package main\n\nimport \"fmt\"\n\nfunc climbStairs(n int) int {\n\t// Return the number of distinct ways to climb n stairs\n\treturn 0\n}\n\nfunc main() {\n\tfmt.Println(climbStairs(5))\n}"
+      "go": "package main\n\nimport \"fmt\"\n\nfunc climbStairs(n int) int {\n\t// Return the number of distinct ways to climb n stairs\n\treturn 0\n}\n\nfunc main() {\n\tfmt.Println(climbStairs(5))\n}",
+      "java": "public class Solution {\n    public static int climbStairs(int n) {\n        // Return the number of distinct ways to climb n stairs\n        return 0;\n    }\n\n    public static void main(String[] args) {\n        System.out.println(climbStairs(5));\n    }\n}"
     }
   },
   {
@@ -156,7 +160,8 @@
     "scaffolds": {
       "python": "def merge(intervals):\n    # Return merged non-overlapping intervals\n    pass\n\n# Example usage:\nprint(merge([[1,3],[2,6],[8,10],[15,18]]))",
       "javascript": "function merge(intervals) {\n  // Return merged non-overlapping intervals\n}\n\n// Example usage:\nconsole.log(merge([[1,3],[2,6],[8,10],[15,18]]));",
-      "go": "package main\n\nimport (\n\t\"fmt\"\n\t\"sort\"\n)\n\nfunc merge(intervals [][]int) [][]int {\n\t// Return merged non-overlapping intervals\n\treturn nil\n}\n\nfunc main() {\n\tfmt.Println(merge([][]int{{1,3},{2,6},{8,10},{15,18}}))\n}"
+      "go": "package main\n\nimport (\n\t\"fmt\"\n\t\"sort\"\n)\n\nfunc merge(intervals [][]int) [][]int {\n\t// Return merged non-overlapping intervals\n\treturn nil\n}\n\nfunc main() {\n\tfmt.Println(merge([][]int{{1,3},{2,6},{8,10},{15,18}}))\n}",
+      "java": "import java.util.*;\n\npublic class Solution {\n    public static int[][] merge(int[][] intervals) {\n        // Return merged non-overlapping intervals\n        return new int[][]{};\n    }\n\n    public static void main(String[] args) {\n        int[][] result = merge(new int[][]{{1,3},{2,6},{8,10},{15,18}});\n        System.out.println(Arrays.deepToString(result));\n    }\n}"
     }
   }
 ]

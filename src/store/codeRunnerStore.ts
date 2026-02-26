@@ -3,6 +3,7 @@ import type { Language } from "../types/question";
 import { runJavaScript } from "../runners/jsRunner";
 import { runPython } from "../runners/pythonRunner";
 import { runGo } from "../runners/goRunner";
+import { runJava } from "../runners/javaRunner";
 
 export interface RunResult {
   output: string;
@@ -41,6 +42,9 @@ export const useCodeRunnerStore = create<CodeRunnerStore>((setState) => ({
           break;
         case "go":
           res = runGo();
+          break;
+        case "java":
+          res = runJava();
           break;
         default:
           res = { output: "", error: "Unsupported language", duration: 0 };

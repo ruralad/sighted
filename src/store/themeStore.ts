@@ -11,7 +11,7 @@ export interface ThemeState {
 
 const THEME_KEY = "sighted75:theme";
 
-const DEFAULT_THEME: ThemeState = { mode: "dark", palette: "emerald" };
+const DEFAULT_THEME: ThemeState = { mode: "light", palette: "amber" };
 
 export const PALETTE_META: Record<ThemePalette, { label: string; swatch: string }> = {
   emerald: { label: "Emerald", swatch: "#22C55E" },

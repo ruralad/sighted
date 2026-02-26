@@ -9,6 +9,7 @@ const LANGUAGES: { value: Language; label: string }[] = [
   { value: "javascript", label: "JavaScript" },
   { value: "python", label: "Python" },
   { value: "go", label: "Go" },
+  { value: "java", label: "Java" },
 ];
 
 export function LanguageSelector({ language, onChange }: LanguageSelectorProps) {

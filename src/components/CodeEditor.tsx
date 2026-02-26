@@ -5,6 +5,7 @@ import { basicSetup } from "codemirror";
 import { javascript } from "@codemirror/lang-javascript";
 import { python } from "@codemirror/lang-python";
 import { go } from "@codemirror/lang-go";
+import { java } from "@codemirror/lang-java";
 import { oneDark } from "@codemirror/theme-one-dark";
 import { indentWithTab } from "@codemirror/commands";
 import type { Language } from "../types/question";
@@ -18,6 +19,8 @@ function getLangExtension(lang: Language) {
       return python();
     case "go":
       return go();
+    case "java":
+      return java();
   }
 }
 

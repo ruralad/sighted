@@ -8,9 +8,10 @@ export interface Scaffolds {
   python: string;
   javascript: string;
   go: string;
+  java: string;
 }
 
-export type Language = "python" | "javascript" | "go";
+export type Language = "python" | "javascript" | "go" | "java";
 
 export interface Question {
   id: number;
