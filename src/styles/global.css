@@ -490,6 +490,10 @@ button:disabled {
   background: #DC2626;
   box-shadow: 0 0 20px rgba(239, 68, 68, 0.3);
 }
+.btn--sm {
+  padding: 4px 10px;
+  font-size: 0.8rem;
+}
 
 /* ============================================================
    PROGRESS BAR
@@ -1299,6 +1303,11 @@ button:disabled {
 }
 .settings-notice strong {
   color: var(--text-secondary);
+}
+.settings-confirm-inline {
+  display: flex;
+  gap: 6px;
+  align-items: center;
 }
 
 /* --- Mode toggle --- */

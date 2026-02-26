@@ -1,5 +1,6 @@
 import type { Question } from "../types/question";
 import type { ReactNode } from "react";
+import { useEditorStore } from "../store/editorStore";
 import { HintPanel } from "./HintPanel";
 
 // Splits on backtick-delimited segments and renders them as <code> elements
@@ -24,6 +25,8 @@ export function QuestionCard({
   isCompleted,
   onToggleComplete,
 }: QuestionCardProps) {
+  const showHints = useEditorStore((s) => s.settings.showHints);
+  const showKeywords = useEditorStore((s) => s.settings.showKeywords);
   const difficultyClass = `badge--${question.difficulty.toLowerCase()}`;
 
   return (
@@ -43,12 +46,14 @@ export function QuestionCard({
             ) : "Mark Complete"}
           </button>
         </div>
-        <div className="question-card__meta">
-          <span className={`badge ${difficultyClass}`}>
-            {question.difficulty}
-          </span>
-          <span className="badge badge--category">{question.category}</span>
-        </div>
+        {showKeywords && (
+          <div className="question-card__meta">
+            <span className={`badge ${difficultyClass}`}>
+              {question.difficulty}
+            </span>
+            <span className="badge badge--category">{question.category}</span>
+          </div>
+        )}
       </div>
 
       <div className="question-card__body">
@@ -83,7 +88,7 @@ export function QuestionCard({
           ))}
         </div>
 
-        <HintPanel key={question.id} hints={question.hints} />
+        {showHints && <HintPanel key={question.id} hints={question.hints} />}
       </div>
     </div>
   );

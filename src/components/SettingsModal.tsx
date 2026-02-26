@@ -7,6 +7,8 @@ import {
   type EditorThemeId,
   type EditorSettings,
 } from "../store/editorStore";
+import { useCompletionStore } from "../store/completionStore";
+import { useQuestionStore } from "../store/questionStore";
 
 const PALETTES = Object.entries(PALETTE_META) as [ThemePalette, typeof PALETTE_META[ThemePalette]][];
 
@@ -104,6 +106,8 @@ function AppearanceTab() {
   const adaptAppTheme = useEditorStore((s) => s.settings.adaptAppTheme);
   const editorTheme = useEditorStore((s) => s.settings.editorTheme);
   const zenFullscreen = useEditorStore((s) => s.settings.zenFullscreen);
+  const showHints = useEditorStore((s) => s.settings.showHints);
+  const showKeywords = useEditorStore((s) => s.settings.showKeywords);
   const updateEditor = useEditorStore((s) => s.update);
 
   const themeDisabled = adaptAppTheme && editorTheme !== "auto";
@@ -183,6 +187,40 @@ function AppearanceTab() {
               type="checkbox"
               checked={zenFullscreen}
               onChange={(e) => updateEditor("zenFullscreen", e.target.checked)}
+            />
+            <span className="settings-toggle__track" />
+          </label>
+        </div>
+      </section>
+
+      <section className="settings-section">
+        <h3 className="settings-section__label">Question Panel</h3>
+
+        <div className="settings-row">
+          <div className="settings-row__info">
+            <span className="settings-row__name">Hints</span>
+            <span className="settings-row__desc">Show the progressive hint panel below questions</span>
+          </div>
+          <label className="settings-toggle">
+            <input
+              type="checkbox"
+              checked={showHints}
+              onChange={(e) => updateEditor("showHints", e.target.checked)}
+            />
+            <span className="settings-toggle__track" />
+          </label>
+        </div>
+
+        <div className="settings-row">
+          <div className="settings-row__info">
+            <span className="settings-row__name">Keywords</span>
+            <span className="settings-row__desc">Show difficulty and category badges on questions</span>
+          </div>
+          <label className="settings-toggle">
+            <input
+              type="checkbox"
+              checked={showKeywords}
+              onChange={(e) => updateEditor("showKeywords", e.target.checked)}
             />
             <span className="settings-toggle__track" />
           </label>
@@ -347,12 +385,56 @@ function EditorTab() {
 }
 
 function AccountTab() {
+  const resetProgress = useCompletionStore((s) => s.resetProgress);
+  const completed = useCompletionStore((s) => s.completed);
+  const totalQuestions = useQuestionStore((s) => s.totalQuestions);
+  const [confirming, setConfirming] = useState(false);
+
+  const handleReset = useCallback(async () => {
+    await resetProgress();
+    window.location.reload();
+  }, [resetProgress]);
+
   return (
-    <section className="settings-section">
-      <div className="settings-placeholder">
-        <p className="settings-placeholder__text">Account settings coming soon.</p>
-      </div>
-    </section>
+    <>
+      <section className="settings-section">
+        <h3 className="settings-section__label">Progress</h3>
+
+        <div className="settings-row">
+          <div className="settings-row__info">
+            <span className="settings-row__name">Completed</span>
+            <span className="settings-row__desc">
+              {completed.size} of {totalQuestions} questions
+            </span>
+          </div>
+        </div>
+
+        <div className="settings-row">
+          <div className="settings-row__info">
+            <span className="settings-row__name">Reset Progress</span>
+            <span className="settings-row__desc">Clear all completion data and start fresh</span>
+          </div>
+          {confirming ? (
+            <div className="settings-confirm-inline">
+              <button className="btn btn--danger btn--sm" onClick={handleReset}>
+                Yes, Reset
+              </button>
+              <button className="btn btn--secondary btn--sm" onClick={() => setConfirming(false)}>
+                Cancel
+              </button>
+            </div>
+          ) : (
+            <button
+              className="btn btn--ghost btn--sm"
+              onClick={() => setConfirming(true)}
+              disabled={completed.size === 0}
+            >
+              Reset
+            </button>
+          )}
+        </div>
+      </section>
+    </>
   );
 }
 

@@ -59,6 +59,8 @@ export interface EditorSettings {
   editorTheme: EditorThemeId;
   adaptAppTheme: boolean;
   zenFullscreen: boolean;
+  showHints: boolean;
+  showKeywords: boolean;
 }
 
 const EDITOR_KEY = "sighted75:editor";
@@ -81,6 +83,8 @@ export const DEFAULT_EDITOR: EditorSettings = {
   editorTheme: "auto",
   adaptAppTheme: false,
   zenFullscreen: false,
+  showHints: true,
+  showKeywords: true,
 };
 
 // Metadata for the theme picker UI — grouped by variant for easier browsing

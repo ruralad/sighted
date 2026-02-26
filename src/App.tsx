@@ -96,10 +96,46 @@ export function App() {
   return <AppInner />;
 }
 
+function AllDoneScreen({ totalQuestions }: { totalQuestions: number }) {
+  const resetProgress = useCompletionStore((s) => s.resetProgress);
+  const [confirming, setConfirming] = useState(false);
+
+  const handleReset = useCallback(async () => {
+    await resetProgress();
+    window.location.reload();
+  }, [resetProgress]);
+
+  return (
+    <div className="app-done">
+      <div className="app-done__content">
+        <h1>All Done!</h1>
+        <p>You've completed all {totalQuestions} questions. Amazing work!</p>
+        <button className="btn btn--primary" onClick={() => setConfirming(true)}>
+          Reset Progress
+        </button>
+        {confirming ? (
+          <div className="confirm-overlay" onClick={() => setConfirming(false)}>
+            <div className="confirm-dialog" onClick={(e) => e.stopPropagation()}>
+              <p>Reset all progress? This cannot be undone.</p>
+              <div className="confirm-dialog__actions">
+                <button className="btn btn--danger" onClick={handleReset}>
+                  Yes, Reset
+                </button>
+                <button className="btn btn--secondary" onClick={() => setConfirming(false)}>
+                  Cancel
+                </button>
+              </div>
+            </div>
+          </div>
+        ) : null}
+      </div>
+    </div>
+  );
+}
+
 function AppInner() {
   const completed = useCompletionStore((s) => s.completed);
   const toggleComplete = useCompletionStore((s) => s.toggleComplete);
-  const resetProgress = useCompletionStore((s) => s.resetProgress);
 
   const question = useQuestionStore((s) => s.question);
   const totalQuestions = useQuestionStore((s) => s.totalQuestions);
@@ -118,7 +154,6 @@ function AppInner() {
   const editorSettings = useEditorStore((s) => s.settings);
 
   const [language, setLanguage] = useState<Language>("javascript");
-  const [showResetConfirm, setShowResetConfirm] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [showQuestions, setShowQuestions] = useState(false);
   const [zenMode, setZenMode] = useState(false);
@@ -133,8 +168,10 @@ function AppInner() {
 
   // Forces CodeEditor to fully remount when question, language, theme, or editor settings change.
   // CM6 doesn't support dynamic reconfiguration of themes, so a fresh instance is needed.
+  // Exclude display-only prefs (showHints, showKeywords, zenFullscreen) that don't affect the editor.
+  const { showHints: _, showKeywords: _k, zenFullscreen: _z, ...editorCmSettings } = editorSettings;
   const editorKey = question
-    ? `${question.id}-${language}-${themeMode}-${themePalette}-${JSON.stringify(editorSettings)}`
+    ? `${question.id}-${language}-${themeMode}-${themePalette}-${JSON.stringify(editorCmSettings)}`
     : "empty";
 
   const handleCodeChange = useCallback((code: string) => {
@@ -166,20 +203,10 @@ function AppInner() {
     [clearResult],
   );
 
-  const handleReset = useCallback(async () => {
-    await resetProgress();
-    setShowResetConfirm(false);
-    clearResult();
-    codeRef.current = "";
-    window.location.reload();
-  }, [resetProgress, clearResult]);
-
   const openSettings = useCallback(() => setShowSettings(true), []);
   const closeSettings = useCallback(() => setShowSettings(false), []);
   const openQuestions = useCallback(() => setShowQuestions(true), []);
   const closeQuestions = useCallback(() => setShowQuestions(false), []);
-  const openResetConfirm = useCallback(() => setShowResetConfirm(true), []);
-  const closeResetConfirm = useCallback(() => setShowResetConfirm(false), []);
   const zenFullscreen = useEditorStore((s) => s.settings.zenFullscreen);
 
   const toggleZen = useCallback(() => {
@@ -237,34 +264,7 @@ function AppInner() {
   );
 
   if (!question) {
-    return (
-      <div className="app-done">
-        <div className="app-done__content">
-          <h1>All Done!</h1>
-          <p>
-            You've completed all {totalQuestions} questions. Amazing work!
-          </p>
-          <button className="btn btn--primary" onClick={openResetConfirm}>
-            Reset Progress
-          </button>
-          {showResetConfirm ? (
-            <div className="confirm-overlay">
-              <div className="confirm-dialog">
-                <p>Reset all progress? This cannot be undone.</p>
-                <div className="confirm-dialog__actions">
-                  <button className="btn btn--danger" onClick={handleReset}>
-                    Yes, Reset
-                  </button>
-                  <button className="btn btn--secondary" onClick={closeResetConfirm}>
-                    Cancel
-                  </button>
-                </div>
-              </div>
-            </div>
-          ) : null}
-        </div>
-      </div>
-    );
+    return <AllDoneScreen totalQuestions={totalQuestions} />;
   }
 
   if (zenMode) {
@@ -332,9 +332,6 @@ function AppInner() {
             <Shuffle size={14} style={{ marginRight: 6, verticalAlign: "middle" }} />
             Random
           </button>
-          <button className="btn btn--ghost" onClick={openResetConfirm}>
-            Reset
-          </button>
         </div>
       </header>
 
@@ -381,22 +378,6 @@ function AppInner() {
           <OutputPanel result={result} running={running} pyodideLoading={pyodideLoading} />
         </div>
       </main>
-
-      {showResetConfirm ? (
-        <div className="confirm-overlay" onClick={closeResetConfirm}>
-          <div className="confirm-dialog" onClick={(e) => e.stopPropagation()}>
-            <p>Reset all progress? This cannot be undone.</p>
-            <div className="confirm-dialog__actions">
-              <button className="btn btn--danger" onClick={handleReset}>
-                Yes, Reset
-              </button>
-              <button className="btn btn--secondary" onClick={closeResetConfirm}>
-                Cancel
-              </button>
-            </div>
-          </div>
-        </div>
-      ) : null}
 
       <SettingsModal open={showSettings} onClose={closeSettings} />
       <QuestionsModal
