@@ -30,7 +30,7 @@ export function QuestionCard({
     <div className="question-card">
       <div className="question-card__header">
         <div className="question-card__title-row">
-          <h2 className="question-card__title">{question.title}</h2>
+          <h2 className="question-card__title">{question.id}. {question.title}</h2>
           <button
             className={`btn-complete ${isCompleted ? "btn-complete--done" : ""}`}
             onClick={onToggleComplete}

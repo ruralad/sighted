@@ -1,4 +1,5 @@
 import { useState, useCallback, useRef, useEffect } from "react";
+import { Eye, EyeOff, Shuffle } from "lucide-react";
 import type { Language } from "./types/question";
 import { useThemeStore } from "./store/themeStore";
 import { useCompletionStore } from "./store/completionStore";
@@ -102,7 +103,7 @@ function AppInner() {
 
   const question = useQuestionStore((s) => s.question);
   const totalQuestions = useQuestionStore((s) => s.totalQuestions);
-  const nextQuestionAction = useQuestionStore((s) => s.nextQuestion);
+  const randomQuestionAction = useQuestionStore((s) => s.randomQuestion);
   const selectQuestion = useQuestionStore((s) => s.selectQuestion);
 
   const running = useCodeRunnerStore((s) => s.running);
@@ -120,6 +121,7 @@ function AppInner() {
   const [showResetConfirm, setShowResetConfirm] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [showQuestions, setShowQuestions] = useState(false);
+  const [zenMode, setZenMode] = useState(false);
   // Stores editor content in a ref to avoid re-renders on every keystroke
   const codeRef = useRef("");
 
@@ -150,11 +152,11 @@ function AppInner() {
     runCode(language, codeRef.current);
   }, [language, runCode, question]);
 
-  const handleNext = useCallback(() => {
+  const handleRandom = useCallback(() => {
     clearResult();
     codeRef.current = "";
-    nextQuestionAction(completed);
-  }, [nextQuestionAction, clearResult, completed]);
+    randomQuestionAction();
+  }, [randomQuestionAction, clearResult]);
 
   const handleLanguageChange = useCallback(
     (lang: Language) => {
@@ -178,6 +180,52 @@ function AppInner() {
   const closeQuestions = useCallback(() => setShowQuestions(false), []);
   const openResetConfirm = useCallback(() => setShowResetConfirm(true), []);
   const closeResetConfirm = useCallback(() => setShowResetConfirm(false), []);
+  const zenFullscreen = useEditorStore((s) => s.settings.zenFullscreen);
+
+  const toggleZen = useCallback(() => {
+    setZenMode((prev) => {
+      const next = !prev;
+      if (next && zenFullscreen) {
+        document.documentElement.requestFullscreen?.().catch(() => {});
+      }
+      if (!next && document.fullscreenElement) {
+        document.exitFullscreen?.().catch(() => {});
+      }
+      return next;
+    });
+  }, [zenFullscreen]);
+
+  const exitZen = useCallback(() => {
+    setZenMode(false);
+    if (document.fullscreenElement) {
+      document.exitFullscreen?.().catch(() => {});
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!zenMode) return;
+
+    const handleKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape" && !document.fullscreenElement) {
+        setZenMode(false);
+      }
+    };
+
+    // Sync: if user exits fullscreen via browser chrome (F11 / Esc),
+    // also exit zen mode
+    const handleFullscreenChange = () => {
+      if (!document.fullscreenElement && zenFullscreen) {
+        setZenMode(false);
+      }
+    };
+
+    document.addEventListener("keydown", handleKey);
+    document.addEventListener("fullscreenchange", handleFullscreenChange);
+    return () => {
+      document.removeEventListener("keydown", handleKey);
+      document.removeEventListener("fullscreenchange", handleFullscreenChange);
+    };
+  }, [zenMode, zenFullscreen]);
 
   const handleSelectQuestion = useCallback(
     (id: number) => {
@@ -219,6 +267,33 @@ function AppInner() {
     );
   }
 
+  if (zenMode) {
+    return (
+      <div className="zen">
+        <div className="zen__editor">
+          <CodeEditor
+            key={editorKey}
+            language={language}
+            initialCode={scaffoldCode}
+            themeMode={themeMode}
+            editorSettings={editorSettings}
+            onCodeChange={handleCodeChange}
+            onRun={handleRun}
+          />
+        </div>
+        <button
+          className="zen__exit"
+          onClick={exitZen}
+          aria-label="Exit Zen Mode"
+          title="Exit Zen Mode (Esc)"
+        >
+          <EyeOff size={16} />
+          <span className="zen__exit-label">Esc</span>
+        </button>
+      </div>
+    );
+  }
+
   return (
     <div className="app">
       <header className="topbar">
@@ -239,14 +314,23 @@ function AppInner() {
           </button>
           <button
             className="topbar__settings-btn"
+            onClick={toggleZen}
+            aria-label="Zen Mode"
+            title="Zen Mode"
+          >
+            <Eye size={18} />
+          </button>
+          <button
+            className="topbar__settings-btn"
             onClick={openSettings}
             aria-label="Settings"
             title="Settings"
           >
             {gearIcon}
           </button>
-          <button className="btn btn--secondary" onClick={handleNext}>
-            Next Question
+          <button className="btn btn--secondary" onClick={handleRandom}>
+            <Shuffle size={14} style={{ marginRight: 6, verticalAlign: "middle" }} />
+            Random
           </button>
           <button className="btn btn--ghost" onClick={openResetConfirm}>
             Reset

@@ -10,7 +10,7 @@ import {
 
 const PALETTES = Object.entries(PALETTE_META) as [ThemePalette, typeof PALETTE_META[ThemePalette]][];
 
-type SettingsTab = "editor" | "theme" | "account";
+type SettingsTab = "editor" | "appearance" | "account";
 
 const FONT_OPTIONS: { value: EditorFontFamily; label: string }[] = [
   { value: "JetBrains Mono", label: "JetBrains Mono" },
@@ -95,62 +95,100 @@ const accountIcon = (
 
 // --- Tab content components ---
 
-function ThemeTab() {
+function AppearanceTab() {
   const mode = useThemeStore((s) => s.theme.mode);
   const palette = useThemeStore((s) => s.theme.palette);
   const toggleMode = useThemeStore((s) => s.toggleMode);
   const setPalette = useThemeStore((s) => s.setPalette);
 
+  const adaptAppTheme = useEditorStore((s) => s.settings.adaptAppTheme);
+  const editorTheme = useEditorStore((s) => s.settings.editorTheme);
+  const zenFullscreen = useEditorStore((s) => s.settings.zenFullscreen);
+  const updateEditor = useEditorStore((s) => s.update);
+
+  const themeDisabled = adaptAppTheme && editorTheme !== "auto";
+
   return (
-    <section className="settings-section">
-      <h3 className="settings-section__label">Appearance</h3>
+    <>
+      <section className="settings-section">
+        <h3 className="settings-section__label">Theme</h3>
 
-      <div className="settings-row">
-        <div className="settings-row__info">
-          <span className="settings-row__name">Mode</span>
-          <span className="settings-row__desc">Switch between dark and light</span>
-        </div>
-        <div className="settings-mode-toggle">
-          <button
-            className={`settings-mode-toggle__option ${mode === "dark" ? "settings-mode-toggle__option--active" : ""}`}
-            onClick={() => { if (mode !== "dark") toggleMode(); }}
-            aria-label="Dark mode"
-          >
-            {moonIcon} Dark
-          </button>
-          <button
-            className={`settings-mode-toggle__option ${mode === "light" ? "settings-mode-toggle__option--active" : ""}`}
-            onClick={() => { if (mode !== "light") toggleMode(); }}
-            aria-label="Light mode"
-          >
-            {sunIcon} Light
-          </button>
-        </div>
-      </div>
+        {themeDisabled && (
+          <div className="settings-notice">
+            Theme is controlled by the editor&apos;s <strong>Adapt App Theme</strong> setting.
+            Disable it in the Editor tab to change mode and palette manually.
+          </div>
+        )}
 
-      <div className="settings-row">
-        <div className="settings-row__info">
-          <span className="settings-row__name">Palette</span>
-          <span className="settings-row__desc">Choose your accent color</span>
-        </div>
-        <div className="settings-palette-picker">
-          {PALETTES.map(([key, meta]) => (
+        <div className={`settings-row ${themeDisabled ? "settings-row--disabled" : ""}`}>
+          <div className="settings-row__info">
+            <span className="settings-row__name">Mode</span>
+            <span className="settings-row__desc">Switch between dark and light</span>
+          </div>
+          <div className="settings-mode-toggle">
             <button
-              key={key}
-              className={`settings-palette-picker__item ${palette === key ? "settings-palette-picker__item--active" : ""}`}
-              onClick={() => setPalette(key)}
-              aria-label={`${meta.label} palette`}
+              className={`settings-mode-toggle__option ${mode === "dark" ? "settings-mode-toggle__option--active" : ""}`}
+              onClick={() => { if (!themeDisabled && mode !== "dark") toggleMode(); }}
+              disabled={themeDisabled}
+              aria-label="Dark mode"
             >
-              <span
-                className="settings-palette-picker__swatch"
-                style={{ "--swatch-color": meta.swatch } as React.CSSProperties}
-              />
-              <span className="settings-palette-picker__label">{meta.label}</span>
+              {moonIcon} Dark
             </button>
-          ))}
+            <button
+              className={`settings-mode-toggle__option ${mode === "light" ? "settings-mode-toggle__option--active" : ""}`}
+              onClick={() => { if (!themeDisabled && mode !== "light") toggleMode(); }}
+              disabled={themeDisabled}
+              aria-label="Light mode"
+            >
+              {sunIcon} Light
+            </button>
+          </div>
         </div>
-      </div>
-    </section>
+
+        <div className={`settings-row ${themeDisabled ? "settings-row--disabled" : ""}`}>
+          <div className="settings-row__info">
+            <span className="settings-row__name">Palette</span>
+            <span className="settings-row__desc">Choose your accent color</span>
+          </div>
+          <div className="settings-palette-picker">
+            {PALETTES.map(([key, meta]) => (
+              <button
+                key={key}
+                className={`settings-palette-picker__item ${palette === key ? "settings-palette-picker__item--active" : ""}`}
+                onClick={() => { if (!themeDisabled) setPalette(key); }}
+                disabled={themeDisabled}
+                aria-label={`${meta.label} palette`}
+              >
+                <span
+                  className="settings-palette-picker__swatch"
+                  style={{ "--swatch-color": meta.swatch } as React.CSSProperties}
+                />
+                <span className="settings-palette-picker__label">{meta.label}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <section className="settings-section">
+        <h3 className="settings-section__label">Zen Mode</h3>
+
+        <div className="settings-row">
+          <div className="settings-row__info">
+            <span className="settings-row__name">Fullscreen</span>
+            <span className="settings-row__desc">Enter true fullscreen when activating Zen Mode</span>
+          </div>
+          <label className="settings-toggle">
+            <input
+              type="checkbox"
+              checked={zenFullscreen}
+              onChange={(e) => updateEditor("zenFullscreen", e.target.checked)}
+            />
+            <span className="settings-toggle__track" />
+          </label>
+        </div>
+      </section>
+    </>
   );
 }
 
@@ -327,7 +365,7 @@ interface SettingsModalProps {
 
 const TABS: { id: SettingsTab; label: string; icon: React.ReactNode }[] = [
   { id: "editor", label: "Editor", icon: editorIcon },
-  { id: "theme", label: "Theme", icon: themeIcon },
+  { id: "appearance", label: "Appearance", icon: themeIcon },
   { id: "account", label: "Account", icon: accountIcon },
 ];
 
@@ -390,7 +428,7 @@ export function SettingsModal({ open, onClose }: SettingsModalProps) {
           </div>
           <div className="settings-main__body">
             {activeTab === "editor" && <EditorTab />}
-            {activeTab === "theme" && <ThemeTab />}
+            {activeTab === "appearance" && <AppearanceTab />}
             {activeTab === "account" && <AccountTab />}
           </div>
         </div>

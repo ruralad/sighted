@@ -58,6 +58,7 @@ export interface EditorSettings {
   scrollPastEnd: boolean;
   editorTheme: EditorThemeId;
   adaptAppTheme: boolean;
+  zenFullscreen: boolean;
 }
 
 const EDITOR_KEY = "sighted75:editor";
@@ -79,6 +80,7 @@ export const DEFAULT_EDITOR: EditorSettings = {
   scrollPastEnd: false,
   editorTheme: "auto",
   adaptAppTheme: false,
+  zenFullscreen: false,
 };
 
 // Metadata for the theme picker UI — grouped by variant for easier browsing

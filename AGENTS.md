@@ -2,7 +2,7 @@
 
 ## Project Overview
 
-Sighted 75 is a single-page React app for practicing LeetCode-style coding questions (the "Blind 75" set). It features an in-browser code editor (CodeMirror 6), JavaScript/Python execution, Go/Java/Rust/C/C++ scaffold-only support, completion tracking via IndexedDB, and a multi-palette dark/light theme system.
+Sighted 75 is a single-page React app for practicing LeetCode-style coding questions (the "Blind 75" set). It features an in-browser code editor (CodeMirror 6) with 31 selectable syntax themes, JavaScript/Python execution, Go/Java/Rust/C/C++ scaffold-only support, completion tracking via IndexedDB, a multi-palette dark/light theme system with optional editor-theme-driven app theming, and a distraction-free Zen Mode.
 
 ## Tech Stack
 
@@ -11,7 +11,8 @@ Sighted 75 is a single-page React app for practicing LeetCode-style coding quest
 - **Bundler:** rolldown-vite (aliased as `vite`)
 - **Framework:** React 19 + TypeScript
 - **State management:** Zustand 5
-- **Editor:** CodeMirror 6
+- **Editor:** CodeMirror 6 + `@uiw/codemirror-themes-all` (31 syntax themes)
+- **Icons:** lucide-react (tree-shakable SVG icons)
 - **Persistence:** IndexedDB via `idb-keyval`
 - **Linter:** oxlint
 - **Fonts:** JetBrains Mono (display/code) + IBM Plex Sans (body) via Google Fonts
@@ -32,19 +33,19 @@ src/
 ├── main.tsx                  # Entry point, renders <App /> in StrictMode
 ├── App.tsx                   # Root component, hydrates stores, orchestrates layout
 ├── components/               # Presentational components
-│   ├── CodeEditor.tsx        # CodeMirror 6 wrapper with dynamic theming + user-configurable extensions
+│   ├── CodeEditor.tsx        # CodeMirror 6 wrapper with 31 selectable themes, dynamic theming + user-configurable extensions
 │   ├── HintPanel.tsx         # Progressive hint reveal
 │   ├── LanguageSelector.tsx  # Language tab selector (JS/Python/Go/Java active; Rust/C/C++ scaffolded)
 │   ├── OutputPanel.tsx       # Code execution output display
 │   ├── ProgressBar.tsx       # Completion progress indicator
-│   ├── QuestionCard.tsx      # Question display with examples
+│   ├── QuestionCard.tsx      # Question display with numbered title + examples
 │   ├── QuestionsModal.tsx    # All-questions table modal with filters/sort
-│   └── SettingsModal.tsx     # Tabbed settings modal (Theme / Editor / Account)
+│   └── SettingsModal.tsx     # Tabbed settings modal (Editor / Appearance / Account)
 ├── store/                    # Zustand stores + IndexedDB layer
 │   ├── themeStore.ts         # Theme mode (dark/light) + palette (emerald/ocean/amber)
-│   ├── editorStore.ts        # Editor preferences (font, indentation, feature toggles)
+│   ├── editorStore.ts        # Editor preferences (font, indentation, feature toggles, editorTheme, adaptAppTheme, zenFullscreen)
 │   ├── completionStore.ts    # Question completion tracking
-│   ├── questionStore.ts      # Current question selection
+│   ├── questionStore.ts      # Current question selection + randomQuestion
 │   ├── codeRunnerStore.ts    # Code execution state
 │   └── db.ts                 # IndexedDB persistence functions
 ├── runners/                  # Language-specific code execution
@@ -52,12 +53,14 @@ src/
 │   ├── jsRunner.ts           # In-browser JS execution via Function()
 │   ├── pythonRunner.ts       # In-browser Python via Pyodide (lazy-loaded)
 │   └── goRunner.ts           # Stub — Go not supported in browser
+├── themes/
+│   └── editorThemeColors.ts  # Maps each editor theme to app CSS variables for "Adapt App Theme" feature
 ├── data/
 │   └── questions.json        # Question bank (75 Blind questions with keywords + 7-language scaffolds)
 ├── types/
 │   └── question.ts           # TypeScript interfaces
 └── styles/
-    └── global.css            # Full design system with 6 theme variants
+    └── global.css            # Full design system with 6 theme variants + zen mode styles
 ```
 
 ## Conventions
@@ -85,7 +88,13 @@ const store = useThemeStore();                      // bad — subscribes to eve
 
 The theme system uses CSS custom properties with `[data-mode][data-palette]` attribute selectors on `<html>`. There are 3 palettes (emerald, ocean, amber) x 2 modes (dark, light) = 6 variants. Theme tokens are defined in `src/styles/global.css`. The `themeStore` applies attributes to the DOM and persists to IndexedDB.
 
-CodeMirror theming reads CSS variables at editor creation time via `readCSSVar()` in `CodeEditor.tsx`.
+**Editor themes:** CodeMirror supports 31 syntax themes via `@uiw/codemirror-themes-all` (Dracula, Nord, Monokai, etc.) plus an "auto" mode that reads CSS variables at editor creation time via `readCSSVar()` in `CodeEditor.tsx`.
+
+**Adapt App Theme:** When enabled in Editor settings, the entire app's CSS variables are overridden to match the selected editor theme's colors (via inline styles on `<html>`). The color map lives in `src/themes/editorThemeColors.ts`. When active, the Appearance tab's mode/palette controls are disabled with an info notice.
+
+### Zen Mode
+
+Zen Mode strips the UI down to just the code editor filling the viewport. Activated via the eye icon in the topbar, exited via Escape or the floating exit button. An optional "Fullscreen" toggle in Appearance settings uses the browser Fullscreen API for true fullscreen. Exiting fullscreen (via browser chrome or Esc) also exits zen mode.
 
 ### CSS
 
@@ -106,7 +115,7 @@ CodeMirror theming reads CSS variables at editor creation time via `readCSSVar()
 
 ### IndexedDB Keys
 
-All keys are prefixed with `sighted75:` (e.g., `sighted75:completed`, `sighted75:theme`, `sighted75:editor`).
+All keys are prefixed with `sighted75:` — `sighted75:completed`, `sighted75:theme`, `sighted75:editor` (includes editorTheme, adaptAppTheme, zenFullscreen), `sighted75:currentQuestion`, `sighted75:solution:{id}`.
 
 ### Typography
 

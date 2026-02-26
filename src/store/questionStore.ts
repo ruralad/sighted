@@ -18,6 +18,7 @@ interface QuestionStore {
   totalQuestions: number;
   hydrate: (completed: Set<number>) => Promise<void>;
   nextQuestion: (completed: Set<number>) => void;
+  randomQuestion: () => void;
   selectQuestion: (id: number) => void;
 }
 
@@ -55,6 +56,15 @@ export const useQuestionStore = create<QuestionStore>((setState) => ({
     } else {
       setCurrentQuestion(null);
     }
+  },
+
+  randomQuestion: () => {
+    const current = useQuestionStore.getState().question;
+    const pool = allQuestions.filter((q) => q.id !== current?.id);
+    if (pool.length === 0) return;
+    const picked = pool[Math.floor(Math.random() * pool.length)]!;
+    setState({ question: picked });
+    setCurrentQuestion(picked.id);
   },
 
   selectQuestion: (id: number) => {
