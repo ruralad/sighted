@@ -1,11 +1,13 @@
+// Thin persistence layer over IndexedDB using idb-keyval's default store.
+// All keys are prefixed with "sighted75:" to namespace within the shared DB.
 import { get, set, del } from "idb-keyval";
 import type { Language, StoredSolution } from "../types/question";
 
-const COMPLETED_KEY = "blind75:completed";
-const CURRENT_KEY = "blind75:currentQuestion";
+const COMPLETED_KEY = "sighted75:completed";
+const CURRENT_KEY = "sighted75:currentQuestion";
 
 function solutionKey(questionId: number): string {
-  return `blind75:solution:${questionId}`;
+  return `sighted75:solution:${questionId}`;
 }
 
 export async function getCompleted(): Promise<Set<number>> {
@@ -13,6 +15,8 @@ export async function getCompleted(): Promise<Set<number>> {
   return new Set(raw ?? []);
 }
 
+// Reads the full set, mutates, and writes back — acceptable for small sets (<100 items).
+// IndexedDB can't store Sets directly, so we serialize as number[].
 export async function markCompleted(questionId: number): Promise<Set<number>> {
   const completed = await getCompleted();
   completed.add(questionId);

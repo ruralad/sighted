@@ -2,6 +2,7 @@ import type { Question } from "../types/question";
 import type { ReactNode } from "react";
 import { HintPanel } from "./HintPanel";
 
+// Splits on backtick-delimited segments and renders them as <code> elements
 function renderInlineCode(text: string): ReactNode[] {
   const parts = text.split(/(`[^`]+`)/g);
   return parts.map((part, i) => {
@@ -34,7 +35,12 @@ export function QuestionCard({
             className={`btn-complete ${isCompleted ? "btn-complete--done" : ""}`}
             onClick={onToggleComplete}
           >
-            {isCompleted ? "✓ Completed" : "Mark Complete"}
+            {isCompleted ? (
+              <>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: 4, verticalAlign: "middle" }}><polyline points="20 6 9 17 4 12" /></svg>
+                Completed
+              </>
+            ) : "Mark Complete"}
           </button>
         </div>
         <div className="question-card__meta">

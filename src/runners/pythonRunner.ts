@@ -1,5 +1,7 @@
-import type { RunResult } from "../hooks/useCodeRunner";
+import type { RunResult } from "../store/codeRunnerStore";
 
+// Pyodide is ~15MB — lazy-loaded on first Python run and cached for subsequent runs.
+// Two guards prevent duplicate loads: the resolved instance and the in-flight promise.
 let pyodideInstance: unknown = null;
 let loadingPromise: Promise<unknown> | null = null;
 
@@ -56,6 +58,7 @@ export async function runPython(code: string): Promise<RunResult> {
     };
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);
+    // Pyodide wraps Python tracebacks in verbose JS errors — extract just the last 2 lines
     const cleanMsg = msg.includes("PythonError")
       ? msg.split("\n").slice(-2).join("\n")
       : msg;

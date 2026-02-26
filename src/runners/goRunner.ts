@@ -1,4 +1,4 @@
-import type { RunResult } from "../hooks/useCodeRunner";
+import type { RunResult } from "../store/codeRunnerStore";
 
 export function runGo(): RunResult {
   return {

@@ -1,4 +1,4 @@
-import type { RunResult } from "../hooks/useCodeRunner";
+import type { RunResult } from "../store/codeRunnerStore";
 
 interface OutputPanelProps {
   result: RunResult | null;
@@ -23,8 +23,8 @@ export function OutputPanel({
         {running && (
           <div className="output-panel__status">
             {pyodideLoading
-              ? "Loading Python runtime..."
-              : "Running..."}
+              ? "Loading Python runtime\u2026"
+              : "Running\u2026"}
           </div>
         )}
         {!running && !result && (

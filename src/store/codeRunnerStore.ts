@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { create } from "zustand";
 import type { Language } from "../types/question";
 import { runJavaScript } from "../runners/jsRunner";
 import { runPython } from "../runners/pythonRunner";
@@ -10,14 +10,21 @@ export interface RunResult {
   duration: number;
 }
 
-export function useCodeRunner() {
-  const [running, setRunning] = useState(false);
-  const [result, setResult] = useState<RunResult | null>(null);
-  const [pyodideLoading, setPyodideLoading] = useState(false);
+interface CodeRunnerStore {
+  running: boolean;
+  result: RunResult | null;
+  pyodideLoading: boolean;
+  run: (language: Language, code: string) => Promise<void>;
+  clearResult: () => void;
+}
 
-  const run = useCallback(async (language: Language, code: string) => {
-    setRunning(true);
-    setResult(null);
+export const useCodeRunnerStore = create<CodeRunnerStore>((setState) => ({
+  running: false,
+  result: null,
+  pyodideLoading: false,
+
+  run: async (language: Language, code: string) => {
+    setState({ running: true, result: null });
 
     const start = performance.now();
     let res: RunResult;
@@ -28,9 +35,9 @@ export function useCodeRunner() {
           res = await runJavaScript(code);
           break;
         case "python":
-          setPyodideLoading(true);
+          setState({ pyodideLoading: true });
           res = await runPython(code);
-          setPyodideLoading(false);
+          setState({ pyodideLoading: false });
           break;
         case "go":
           res = runGo();
@@ -46,12 +53,10 @@ export function useCodeRunner() {
       };
     }
 
+    // Override duration with wall-clock time (runner-reported duration excludes overhead)
     res.duration = Math.round(performance.now() - start);
-    setResult(res);
-    setRunning(false);
-  }, []);
+    setState({ result: res, running: false });
+  },
 
-  const clearResult = useCallback(() => setResult(null), []);
-
-  return { running, result, pyodideLoading, run, clearResult };
-}
+  clearResult: () => setState({ result: null }),
+}));

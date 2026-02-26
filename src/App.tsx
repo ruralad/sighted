@@ -1,23 +1,92 @@
 import { useState, useCallback, useRef, useEffect } from "react";
 import type { Language } from "./types/question";
-import { useCompletion } from "./hooks/useCompletion";
-import { useQuestion } from "./hooks/useQuestion";
-import { useSolution } from "./hooks/useSolution";
-import { useCodeRunner } from "./hooks/useCodeRunner";
+import { useThemeStore } from "./store/themeStore";
+import { useCompletionStore } from "./store/completionStore";
+import { useQuestionStore } from "./store/questionStore";
+import { useCodeRunnerStore } from "./store/codeRunnerStore";
+import { saveSolution } from "./store/db";
 import { ProgressBar } from "./components/ProgressBar";
 import { QuestionCard } from "./components/QuestionCard";
 import { LanguageSelector } from "./components/LanguageSelector";
 import { CodeEditor } from "./components/CodeEditor";
 import { OutputPanel } from "./components/OutputPanel";
+import { SettingsModal } from "./components/SettingsModal";
+
+// Hoisted outside component to avoid re-creating SVG elements on every render
+const gearIcon = (
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <circle cx="12" cy="12" r="3" />
+    <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
+  </svg>
+);
+
+const loadingSpinner = (
+  <div className="app-loading">
+    <div className="spinner" />
+  </div>
+);
 
 export function App() {
-  const { completed, loading: compLoading, toggleComplete, resetProgress } = useCompletion();
-  const { question, loading: qLoading, nextQuestion, totalQuestions } = useQuestion(completed, !compLoading);
-  const { save } = useSolution(question?.id ?? null);
-  const { running, result, pyodideLoading, run, clearResult } = useCodeRunner();
+  const themeLoaded = useThemeStore((s) => s.loaded);
+  const hydrateTheme = useThemeStore((s) => s.hydrate);
+
+  const completionLoading = useCompletionStore((s) => s.loading);
+  const hydrateCompletion = useCompletionStore((s) => s.hydrate);
+
+  const questionLoading = useQuestionStore((s) => s.loading);
+  const hydrateQuestion = useQuestionStore((s) => s.hydrate);
+
+  useEffect(() => {
+    hydrateTheme();
+  }, [hydrateTheme]);
+
+  useEffect(() => {
+    hydrateCompletion();
+  }, [hydrateCompletion]);
+
+  // Track completed set via ref so questionStore.hydrate() gets the latest
+  // value without adding `completed` as a dependency (which would re-trigger hydration)
+  const completedRef = useRef(useCompletionStore.getState().completed);
+  useEffect(() => {
+    return useCompletionStore.subscribe((s) => {
+      completedRef.current = s.completed;
+    });
+  }, []);
+
+  useEffect(() => {
+    if (completionLoading) return;
+    hydrateQuestion(completedRef.current);
+  }, [completionLoading, hydrateQuestion]);
+
+  if (!themeLoaded || completionLoading || questionLoading) {
+    return loadingSpinner;
+  }
+
+  return <AppInner />;
+}
+
+function AppInner() {
+  const completed = useCompletionStore((s) => s.completed);
+  const toggleComplete = useCompletionStore((s) => s.toggleComplete);
+  const resetProgress = useCompletionStore((s) => s.resetProgress);
+
+  const question = useQuestionStore((s) => s.question);
+  const totalQuestions = useQuestionStore((s) => s.totalQuestions);
+  const nextQuestionAction = useQuestionStore((s) => s.nextQuestion);
+
+  const running = useCodeRunnerStore((s) => s.running);
+  const result = useCodeRunnerStore((s) => s.result);
+  const pyodideLoading = useCodeRunnerStore((s) => s.pyodideLoading);
+  const runCode = useCodeRunnerStore((s) => s.run);
+  const clearResult = useCodeRunnerStore((s) => s.clearResult);
+
+  const themeMode = useThemeStore((s) => s.theme.mode);
+  const themePalette = useThemeStore((s) => s.theme.palette);
 
   const [language, setLanguage] = useState<Language>("javascript");
   const [showResetConfirm, setShowResetConfirm] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
+  // Stores editor content in a ref to avoid re-renders on every keystroke
   const codeRef = useRef("");
 
   const scaffoldCode = question?.scaffolds[language] ?? "";
@@ -26,7 +95,9 @@ export function App() {
     codeRef.current = scaffoldCode;
   }, [scaffoldCode]);
 
-  const editorKey = question ? `${question.id}-${language}` : "empty";
+  // Forces CodeEditor to fully remount when question, language, or theme changes.
+  // CM6 doesn't support dynamic reconfiguration of themes, so a fresh instance is needed.
+  const editorKey = question ? `${question.id}-${language}-${themeMode}-${themePalette}` : "empty";
 
   const handleCodeChange = useCallback((code: string) => {
     codeRef.current = code;
@@ -34,20 +105,20 @@ export function App() {
 
   const handleRun = useCallback(() => {
     if (!codeRef.current) return;
-    run(language, codeRef.current);
-  }, [language, run]);
+    runCode(language, codeRef.current);
+  }, [language, runCode]);
 
   const handleSubmit = useCallback(async () => {
     if (!codeRef.current || !question) return;
-    await save(language, codeRef.current);
-    run(language, codeRef.current);
-  }, [language, run, save, question]);
+    await saveSolution(question.id, language, codeRef.current);
+    runCode(language, codeRef.current);
+  }, [language, runCode, question]);
 
   const handleNext = useCallback(() => {
     clearResult();
     codeRef.current = "";
-    nextQuestion();
-  }, [nextQuestion, clearResult]);
+    nextQuestionAction(completed);
+  }, [nextQuestionAction, clearResult, completed]);
 
   const handleLanguageChange = useCallback(
     (lang: Language) => {
@@ -65,14 +136,10 @@ export function App() {
     window.location.reload();
   }, [resetProgress, clearResult]);
 
-  if (compLoading || qLoading) {
-    return (
-      <div className="app-loading">
-        <div className="spinner" />
-        <p>Loading questions...</p>
-      </div>
-    );
-  }
+  const openSettings = useCallback(() => setShowSettings(true), []);
+  const closeSettings = useCallback(() => setShowSettings(false), []);
+  const openResetConfirm = useCallback(() => setShowResetConfirm(true), []);
+  const closeResetConfirm = useCallback(() => setShowResetConfirm(false), []);
 
   if (!question) {
     return (
@@ -82,10 +149,10 @@ export function App() {
           <p>
             You've completed all {totalQuestions} questions. Amazing work!
           </p>
-          <button className="btn btn--primary" onClick={() => setShowResetConfirm(true)}>
+          <button className="btn btn--primary" onClick={openResetConfirm}>
             Reset Progress
           </button>
-          {showResetConfirm && (
+          {showResetConfirm ? (
             <div className="confirm-overlay">
               <div className="confirm-dialog">
                 <p>Reset all progress? This cannot be undone.</p>
@@ -93,13 +160,13 @@ export function App() {
                   <button className="btn btn--danger" onClick={handleReset}>
                     Yes, Reset
                   </button>
-                  <button className="btn btn--secondary" onClick={() => setShowResetConfirm(false)}>
+                  <button className="btn btn--secondary" onClick={closeResetConfirm}>
                     Cancel
                   </button>
                 </div>
               </div>
             </div>
-          )}
+          ) : null}
         </div>
       </div>
     );
@@ -109,19 +176,24 @@ export function App() {
     <div className="app">
       <header className="topbar">
         <div className="topbar__brand">
-          <h1>Blind 75</h1>
+          <h1>Sighted <span className="brand-accent">75</span></h1>
         </div>
         <div className="topbar__center">
           <ProgressBar completed={completed.size} total={totalQuestions} />
         </div>
         <div className="topbar__actions">
+          <button
+            className="topbar__settings-btn"
+            onClick={openSettings}
+            aria-label="Settings"
+            title="Settings"
+          >
+            {gearIcon}
+          </button>
           <button className="btn btn--secondary" onClick={handleNext}>
             Next Question
           </button>
-          <button
-            className="btn btn--ghost"
-            onClick={() => setShowResetConfirm(true)}
-          >
+          <button className="btn btn--ghost" onClick={openResetConfirm}>
             Reset
           </button>
         </div>
@@ -146,7 +218,7 @@ export function App() {
                   onClick={handleRun}
                   disabled={running}
                 >
-                  {running ? "Running..." : "Run"}
+                  {running ? "Running\u2026" : "Run"}
                 </button>
                 <button
                   className="btn btn--primary"
@@ -161,6 +233,7 @@ export function App() {
               key={editorKey}
               language={language}
               initialCode={scaffoldCode}
+              themeMode={themeMode}
               onCodeChange={handleCodeChange}
               onRun={handleRun}
             />
@@ -169,21 +242,23 @@ export function App() {
         </div>
       </main>
 
-      {showResetConfirm && (
-        <div className="confirm-overlay" onClick={() => setShowResetConfirm(false)}>
+      {showResetConfirm ? (
+        <div className="confirm-overlay" onClick={closeResetConfirm}>
           <div className="confirm-dialog" onClick={(e) => e.stopPropagation()}>
             <p>Reset all progress? This cannot be undone.</p>
             <div className="confirm-dialog__actions">
               <button className="btn btn--danger" onClick={handleReset}>
                 Yes, Reset
               </button>
-              <button className="btn btn--secondary" onClick={() => setShowResetConfirm(false)}>
+              <button className="btn btn--secondary" onClick={closeResetConfirm}>
                 Cancel
               </button>
             </div>
           </div>
         </div>
-      )}
+      ) : null}
+
+      <SettingsModal open={showSettings} onClose={closeSettings} />
     </div>
   );
 }

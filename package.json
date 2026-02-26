@@ -1,6 +1,5 @@
 {
-  "name": "blind75-trainer",
-  "private": true,
+  "name": "sighted",
   "version": "1.0.0",
   "type": "module",
   "scripts": {
@@ -10,16 +9,17 @@
     "lint": "oxlint src/"
   },
   "dependencies": {
+    "@codemirror/lang-go": "^6.0.1",
+    "@codemirror/lang-javascript": "^6.2.3",
+    "@codemirror/lang-python": "^6.1.7",
+    "@codemirror/state": "^6.5.2",
+    "@codemirror/theme-one-dark": "^6.1.2",
+    "@codemirror/view": "^6.36.5",
+    "codemirror": "^6.0.1",
+    "idb-keyval": "^6.2.1",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
-    "idb-keyval": "^6.2.1",
-    "@codemirror/state": "^6.5.2",
-    "@codemirror/view": "^6.36.5",
-    "@codemirror/lang-python": "^6.1.7",
-    "@codemirror/lang-javascript": "^6.2.3",
-    "@codemirror/lang-go": "^6.0.1",
-    "@codemirror/theme-one-dark": "^6.1.2",
-    "codemirror": "^6.0.1"
+    "zustand": "^5.0.11"
   },
   "devDependencies": {
     "vite": "npm:rolldown-vite@latest",

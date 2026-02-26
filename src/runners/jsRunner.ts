@@ -1,10 +1,12 @@
-import type { RunResult } from "../hooks/useCodeRunner";
+import type { RunResult } from "../store/codeRunnerStore";
 
 export async function runJavaScript(code: string): Promise<RunResult> {
   const logs: string[] = [];
   const start = performance.now();
 
   try {
+    // Sandboxed execution: user code runs inside a Function() with a custom console
+    // that captures output. The real console is shadowed by the inner declaration.
     const fn = new Function(
       "console",
       `"use strict";
@@ -18,6 +20,7 @@ export async function runJavaScript(code: string): Promise<RunResult> {
       return __logs;`,
     );
 
+    // Race the user code against a 5s timeout to prevent infinite loops
     const timeout = new Promise<never>((_, reject) =>
       setTimeout(() => reject(new Error("Execution timed out (5s limit)")), 5000),
     );

@@ -8,6 +8,7 @@ import { go } from "@codemirror/lang-go";
 import { oneDark } from "@codemirror/theme-one-dark";
 import { indentWithTab } from "@codemirror/commands";
 import type { Language } from "../types/question";
+import type { ThemeMode } from "../store/themeStore";
 
 function getLangExtension(lang: Language) {
   switch (lang) {
@@ -20,9 +21,66 @@ function getLangExtension(lang: Language) {
   }
 }
 
+// CM6 themes require hardcoded values — they don't resolve CSS variables at runtime.
+// We read the computed CSS vars once at editor creation and bake them into the theme.
+function readCSSVar(name: string): string {
+  return getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+}
+
+function buildEditorTheme(mode: ThemeMode) {
+  const bg = readCSSVar("--cm-bg");
+  const gutterBg = readCSSVar("--cm-gutter-bg");
+  const gutterBorder = readCSSVar("--cm-gutter-border");
+  const gutterText = readCSSVar("--cm-gutter-text");
+  const activeLineBg = readCSSVar("--cm-active-line-bg");
+  const activeGutterBg = readCSSVar("--cm-active-gutter-bg");
+  const selectionBg = readCSSVar("--cm-selection-bg");
+  const accent = readCSSVar("--accent");
+  const text = readCSSVar("--text");
+
+  return EditorView.theme(
+    {
+      "&": {
+        height: "100%",
+        fontSize: "13px",
+        backgroundColor: bg,
+        color: text,
+      },
+      ".cm-scroller": { overflow: "auto" },
+      ".cm-content": {
+        fontFamily: "'JetBrains Mono', 'Fira Code', monospace",
+        lineHeight: "1.7",
+        caretColor: accent,
+      },
+      ".cm-gutters": {
+        backgroundColor: gutterBg,
+        borderRight: `1px solid ${gutterBorder}`,
+        color: gutterText,
+        fontFamily: "'JetBrains Mono', monospace",
+        fontSize: "11px",
+      },
+      ".cm-activeLineGutter": {
+        backgroundColor: activeGutterBg,
+        color: accent,
+      },
+      ".cm-activeLine": {
+        backgroundColor: activeLineBg,
+      },
+      ".cm-cursor": {
+        borderLeftColor: accent,
+      },
+      "&.cm-focused .cm-selectionBackground, .cm-selectionBackground": {
+        backgroundColor: `${selectionBg} !important`,
+      },
+    },
+    { dark: mode === "dark" },
+  );
+}
+
 interface CodeEditorProps {
   language: Language;
   initialCode: string;
+  themeMode: ThemeMode;
   onCodeChange: (code: string) => void;
   onRun: () => void;
 }
@@ -30,11 +88,13 @@ interface CodeEditorProps {
 export function CodeEditor({
   language,
   initialCode,
+  themeMode,
   onCodeChange,
   onRun,
 }: CodeEditorProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const viewRef = useRef<EditorView | null>(null);
+  // Ref keeps the latest onRun without adding it to CM keymap dependencies
   const onRunRef = useRef(onRun);
   onRunRef.current = onRun;
 
@@ -46,12 +106,19 @@ export function CodeEditor({
         viewRef.current.destroy();
       }
 
+      // Dark mode layers oneDark as a base, then overrides with our CSS-var theme.
+      // Light mode only uses our custom theme (no base needed).
+      const themeExtensions =
+        themeMode === "dark"
+          ? [oneDark, buildEditorTheme("dark")]
+          : [buildEditorTheme("light")];
+
       const state = EditorState.create({
         doc,
         extensions: [
           basicSetup,
           getLangExtension(language),
-          oneDark,
+          ...themeExtensions,
           keymap.of([
             indentWithTab,
             {
@@ -68,15 +135,6 @@ export function CodeEditor({
               onCodeChange(update.state.doc.toString());
             }
           }),
-          EditorView.theme({
-            "&": { height: "100%", fontSize: "14px" },
-            ".cm-scroller": { overflow: "auto" },
-            ".cm-content": { fontFamily: "var(--font-mono)" },
-            ".cm-gutters": {
-              backgroundColor: "#1e1e3f",
-              borderRight: "1px solid var(--border)",
-            },
-          }),
         ],
       });
 
@@ -85,7 +143,7 @@ export function CodeEditor({
         parent: containerRef.current,
       });
     },
-    [language, onCodeChange],
+    [language, themeMode, onCodeChange],
   );
 
   useEffect(() => {
