@@ -20,7 +20,7 @@ export function ChatRoomList() {
         <div className="flex items-center gap-2">
           <Lock size={13} className="text-[var(--accent)]" />
           <h2 className="text-[13px] font-bold text-[var(--text)] font-[family-name:var(--font-display)]">
-            Encrypted Chat
+            Sighted Chat
           </h2>
         </div>
         <button
@@ -97,10 +97,12 @@ function RoomItem({
 
   return (
     <button
-      className={`w-full flex items-center gap-3 px-4 py-3 text-left transition-[background-color] duration-150 ${
+      className={`w-full flex items-center gap-3 px-4 py-3 text-left transition-[background-color,border-color] duration-150 border-l-2 ${
         active
-          ? "bg-[var(--bg-surface)]"
-          : "hover:bg-[var(--bg-surface)]/50"
+          ? "bg-[var(--bg-surface)] border-l-[var(--accent)]"
+          : unread > 0
+            ? "hover:bg-[var(--bg-surface)]/50 border-l-[var(--accent)]/60"
+            : "hover:bg-[var(--bg-surface)]/50 border-l-transparent"
       }`}
       onClick={onClick}
     >
@@ -119,17 +121,27 @@ function RoomItem({
       </div>
 
       <div className="flex-1 min-w-0">
-        <div className="flex items-center justify-between">
-          <span className="text-[13px] font-medium text-[var(--text)] truncate">
+        <div className="flex items-center justify-between gap-2">
+          <span
+            className={`text-[13px] truncate ${
+              unread > 0
+                ? "font-bold text-[var(--text)]"
+                : "font-medium text-[var(--text)]"
+            }`}
+          >
             {displayName}
           </span>
           {unread > 0 ? (
-            <span className="flex items-center justify-center min-w-[18px] h-[18px] rounded-full bg-[var(--accent)] text-[var(--accent-text-on)] text-[10px] font-bold px-1">
+            <span className="flex items-center justify-center min-w-[18px] h-[18px] rounded-full bg-[var(--accent)] text-[var(--accent-text-on)] text-[10px] font-bold px-1 shrink-0">
               {unread}
             </span>
           ) : null}
         </div>
-        <span className="text-[10px] text-[var(--text-muted)] tabular-nums">
+        <span
+          className={`text-[10px] tabular-nums ${
+            unread > 0 ? "text-[var(--text)]" : "text-[var(--text-muted)]"
+          }`}
+        >
           Expires in {expiresIn}
         </span>
       </div>
@@ -218,7 +230,7 @@ function NewChatModal({ onClose }: { onClose: () => void }) {
               type="text"
               value={query}
               onChange={(e) => handleSearch(e.target.value)}
-              placeholder="Search by username\u2026"
+              placeholder="Search by username…"
               className="flex-1 bg-transparent text-[13px] text-[var(--text)] placeholder:text-[var(--text-muted)] outline-none"
               autoFocus
             />

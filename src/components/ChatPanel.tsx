@@ -99,14 +99,6 @@ function ActiveRoomView({
     return peer?.displayName ?? peer?.username ?? "Chat";
   }, [room, authUser]);
 
-  const expiresIn = useMemo(() => {
-    const diff = new Date(room.expiresAt).getTime() - Date.now();
-    if (diff <= 0) return "Expired";
-    const hours = Math.floor(diff / 3_600_000);
-    const mins = Math.floor((diff % 3_600_000) / 60_000);
-    return `${hours}h ${mins}m`;
-  }, [room.expiresAt]);
-
   const senderNames = useMemo(() => {
     const map = new Map<string, string>();
     for (const m of room.members) {
@@ -146,8 +138,8 @@ function ActiveRoomView({
               {roomTitle}
             </span>
           </div>
-          <span className="text-[10px] text-[var(--text-muted)] tabular-nums">
-            E2E encrypted &middot; Expires in {expiresIn}
+          <span className="text-[10px] text-[var(--text-muted)]">
+            End-to-end encrypted
           </span>
         </div>
       </div>
@@ -186,7 +178,7 @@ function ActiveRoomView({
         <div className="px-4 py-3 border-t border-[var(--border)] bg-[var(--bg-primary)]">
           <div className="flex items-center gap-2 px-3 py-2.5 rounded-[var(--radius-md)] bg-[var(--bg-surface)] text-[12px] text-[var(--text-muted)]">
             <ShieldAlert size={14} className="text-amber-400 shrink-0" />
-            Encryption keys pending{"\u2026"} Chat will be available once {roomTitle} opens their chat.
+            Encryption keys pending… Chat will be available once {roomTitle} opens their chat.
           </div>
         </div>
       ) : (

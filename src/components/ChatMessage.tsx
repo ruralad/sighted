@@ -1,8 +1,10 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useState, useCallback } from "react";
 import { ShieldAlert, Clock } from "lucide-react";
 import type { DecryptedMessage } from "../store/chatStore";
+
+const COLLAPSE_THRESHOLD = 100;
 
 interface ChatMessageProps {
   message: DecryptedMessage;
@@ -10,11 +12,26 @@ interface ChatMessageProps {
   senderName: string;
 }
 
+function getPlainTextLength(html: string): number {
+  if (typeof document === "undefined") return html.length;
+  const el = document.createElement("div");
+  el.innerHTML = html;
+  return el.textContent?.length ?? 0;
+}
+
 export function ChatMessage({ message, isSelf, senderName }: ChatMessageProps) {
   const time = useMemo(() => {
     const d = new Date(message.createdAt);
     return d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
   }, [message.createdAt]);
+
+  const isLong = useMemo(
+    () => !message.failed && getPlainTextLength(message.content) > COLLAPSE_THRESHOLD,
+    [message.content, message.failed],
+  );
+
+  const [expanded, setExpanded] = useState(false);
+  const toggleExpand = useCallback(() => setExpanded((v) => !v), []);
 
   return (
     <div
@@ -43,10 +60,25 @@ export function ChatMessage({ message, isSelf, senderName }: ChatMessageProps) {
             <span>Decryption failed</span>
           </span>
         ) : (
-          <div
-            className="chat-message-content"
-            dangerouslySetInnerHTML={{ __html: message.content }}
-          />
+          <>
+            <div
+              className={`chat-message-content ${isLong && !expanded ? "line-clamp-3" : ""}`}
+              dangerouslySetInnerHTML={{ __html: message.content }}
+            />
+            {isLong ? (
+              <button
+                type="button"
+                onClick={toggleExpand}
+                className={`mt-1 text-[11px] font-medium ${
+                  isSelf
+                    ? "text-[var(--accent-text-on)]/70 hover:text-[var(--accent-text-on)]"
+                    : "text-[var(--accent)] hover:text-[var(--accent-hover)]"
+                } transition-[color] duration-150`}
+              >
+                {expanded ? "Show less" : "Show full"}
+              </button>
+            ) : null}
+          </>
         )}
       </div>
 

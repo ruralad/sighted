@@ -26,7 +26,7 @@ export function ChatInput({ onSend, disabled }: ChatInputProps) {
         defaultLanguage: "javascript",
       }),
       Placeholder.configure({
-        placeholder: "Type a message\u2026",
+        placeholder: "Type a message…",
       }),
     ],
     editorProps: {

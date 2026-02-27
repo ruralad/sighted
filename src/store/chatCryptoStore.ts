@@ -43,7 +43,7 @@ function jwkCacheKey(jwk: JsonWebKey): string {
   return `${jwk.x}:${jwk.y}`;
 }
 
-let hydrated = false;
+let hydratePromise: Promise<void> | null = null;
 
 export const useChatCryptoStore = create<ChatCryptoStore>((setState, getState) => ({
   keyId: null,
@@ -53,40 +53,44 @@ export const useChatCryptoStore = create<ChatCryptoStore>((setState, getState) =
   ready: false,
 
   hydrate: async () => {
-    if (hydrated) return;
-    hydrated = true;
+    if (getState().ready) return;
+    if (hydratePromise) return hydratePromise;
 
-    const stored = await get<StoredKeyPair>(KEYPAIR_KEY);
+    hydratePromise = (async () => {
+      const stored = await get<StoredKeyPair>(KEYPAIR_KEY);
 
-    if (stored) {
-      const [pubKey, privKey] = await Promise.all([
-        importPublicKeyJwk(stored.publicJwk),
-        importPrivateKeyJwk(stored.privateJwk),
-      ]);
+      if (stored) {
+        const [pubKey, privKey] = await Promise.all([
+          importPublicKeyJwk(stored.publicJwk),
+          importPrivateKeyJwk(stored.privateJwk),
+        ]);
+        setState({
+          keyId: stored.keyId,
+          publicJwk: stored.publicJwk,
+          publicKey: pubKey,
+          privateKey: privKey,
+          ready: true,
+        });
+        return;
+      }
+
+      const kp = await generateKeyPair();
+      const pubJwk = await exportPublicKeyJwk(kp.publicKey);
+      const privJwk = await exportPrivateKeyJwk(kp.privateKey);
+      const keyId = crypto.randomUUID();
+
+      await set(KEYPAIR_KEY, { publicJwk: pubJwk, privateJwk: privJwk, keyId } satisfies StoredKeyPair);
+
       setState({
-        keyId: stored.keyId,
-        publicJwk: stored.publicJwk,
-        publicKey: pubKey,
-        privateKey: privKey,
+        keyId,
+        publicJwk: pubJwk,
+        publicKey: kp.publicKey,
+        privateKey: kp.privateKey,
         ready: true,
       });
-      return;
-    }
+    })();
 
-    const kp = await generateKeyPair();
-    const pubJwk = await exportPublicKeyJwk(kp.publicKey);
-    const privJwk = await exportPrivateKeyJwk(kp.privateKey);
-    const keyId = crypto.randomUUID();
-
-    await set(KEYPAIR_KEY, { publicJwk: pubJwk, privateJwk: privJwk, keyId } satisfies StoredKeyPair);
-
-    setState({
-      keyId,
-      publicJwk: pubJwk,
-      publicKey: kp.publicKey,
-      privateKey: kp.privateKey,
-      ready: true,
-    });
+    return hydratePromise;
   },
 
   getDmKey: async (peerPublicJwk: JsonWebKey) => {

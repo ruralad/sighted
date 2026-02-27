@@ -52,7 +52,7 @@ interface ChatStore {
 }
 
 let sseSource: EventSource | null = null;
-let hydrated = false;
+let hydratePromise: Promise<void> | null = null;
 
 export const useChatStore = create<ChatStore>((setState, getState) => ({
   open: false,
@@ -88,33 +88,39 @@ export const useChatStore = create<ChatStore>((setState, getState) => ({
   },
 
   hydrate: async () => {
-    if (hydrated) return;
-    hydrated = true;
+    if (hydratePromise) return hydratePromise;
 
-    setState({ loading: true });
+    hydratePromise = (async () => {
+      setState({ loading: true });
 
-    const cryptoStore = useChatCryptoStore.getState();
-    await cryptoStore.hydrate();
-
-    if (cryptoStore.publicJwk && cryptoStore.keyId) {
       try {
-        await uploadPublicKey(
-          JSON.stringify(cryptoStore.publicJwk),
-          cryptoStore.keyId,
-        );
-      } catch {
-        /* key already uploaded */
+        const cryptoStore = useChatCryptoStore.getState();
+        await cryptoStore.hydrate();
+
+        const freshCrypto = useChatCryptoStore.getState();
+        if (freshCrypto.publicJwk && freshCrypto.keyId) {
+          try {
+            await uploadPublicKey(
+              JSON.stringify(freshCrypto.publicJwk),
+              freshCrypto.keyId,
+            );
+          } catch (e) {
+            console.warn("[chat] uploadPublicKey failed:", e);
+          }
+        }
+
+        const rooms = await getRooms();
+        setState({ rooms, loading: false });
+      } catch (e) {
+        console.error("[chat] hydrate failed:", e);
+        setState({ rooms: [], loading: false });
       }
-    }
 
-    try {
-      const rooms = await getRooms();
-      setState({ rooms, loading: false });
-    } catch {
-      setState({ loading: false });
-    }
+      getState().connectSse();
+      hydratePromise = null;
+    })();
 
-    getState().connectSse();
+    return hydratePromise;
   },
 
   loadMessages: async (roomId) => {
@@ -130,6 +136,14 @@ export const useChatStore = create<ChatStore>((setState, getState) => ({
 
     try {
       const encrypted = await getMessages(roomId);
+      if (encrypted.length === 0) {
+        setState((s) => {
+          const msgs = new Map(s.messages);
+          msgs.set(roomId, []);
+          return { messages: msgs };
+        });
+        return;
+      }
       const decrypted = await decryptMessages(encrypted, room);
 
       setState((s) => {
@@ -139,6 +153,11 @@ export const useChatStore = create<ChatStore>((setState, getState) => ({
       });
     } catch (e) {
       console.error("Failed to load messages:", e);
+      setState((s) => {
+        const msgs = new Map(s.messages);
+        msgs.set(roomId, []);
+        return { messages: msgs };
+      });
     }
   },
 
@@ -204,8 +223,12 @@ export const useChatStore = create<ChatStore>((setState, getState) => ({
             m.id === tempId ? { ...m, pending: false, failed: true } : m,
           ),
         );
-        return { messages: msgs };
+        return { messages: msgs, error: e instanceof Error ? e.message : "Failed to send message" };
       });
+      try {
+        const rooms = await getRooms();
+        setState({ rooms });
+      } catch { /* ignore */ }
     }
   },
 
@@ -292,7 +315,8 @@ export const useChatStore = create<ChatStore>((setState, getState) => ({
               ]);
 
               const unread = new Map(s.unreadCounts);
-              if (msg.roomId !== activeRoomId) {
+              const isSelf = msg.senderId === useAuthStore.getState().user?.id;
+              if (msg.roomId !== activeRoomId && !isSelf) {
                 unread.set(msg.roomId, (unread.get(msg.roomId) ?? 0) + 1);
               }
 
@@ -309,8 +333,17 @@ export const useChatStore = create<ChatStore>((setState, getState) => ({
 
     es.onerror = () => {
       setState({ sseConnected: false });
-      sseSource = null;
-      setTimeout(() => getState().connectSse(), 3000);
+      if (sseSource) {
+        sseSource.close();
+        sseSource = null;
+      }
+      setTimeout(async () => {
+        try {
+          const rooms = await getRooms();
+          setState({ rooms });
+        } catch { /* ignore */ }
+        getState().connectSse();
+      }, 3000);
     };
   },
 
