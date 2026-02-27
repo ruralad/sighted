@@ -12,7 +12,8 @@ import {
 import { useCompletionStore } from "../store/completionStore";
 import { useQuestionStore } from "../store/questionStore";
 import { useAuthStore } from "../store/authStore";
-import { authClient } from "../lib/auth/client";
+import { signOut } from "../../app/actions/auth";
+import { AuthForms } from "./AuthForms";
 
 const PALETTES = Object.entries(PALETTE_META) as [ThemePalette, typeof PALETTE_META[ThemePalette]][];
 
@@ -382,7 +383,7 @@ function AccountTab() {
 
   const handleSignOut = useCallback(async () => {
     setSigningOut(true);
-    await authClient.signOut().catch(() => {});
+    await signOut().catch(() => {});
     window.location.reload();
   }, []);
 
@@ -396,20 +397,12 @@ function AccountTab() {
           <SectionLabel>Account</SectionLabel>
           <SettingsRow>
             <div className="flex items-center gap-3">
-              {user.image ? (
-                <img
-                  src={user.image}
-                  alt=""
-                  className="w-8 h-8 rounded-full object-cover"
-                />
-              ) : (
-                <div className="w-8 h-8 rounded-full bg-[var(--accent)] flex items-center justify-center text-[var(--accent-text-on)] text-[13px] font-bold">
-                  {user.name?.charAt(0)?.toUpperCase() ?? user.email?.charAt(0)?.toUpperCase() ?? "?"}
-                </div>
-              )}
+              <div className="w-8 h-8 rounded-full bg-[var(--accent)] flex items-center justify-center text-[var(--accent-text-on)] text-[13px] font-bold">
+                {user.displayName?.charAt(0)?.toUpperCase() ?? user.username?.charAt(0)?.toUpperCase() ?? "?"}
+              </div>
               <div className="flex flex-col">
-                <span className="text-[13px] font-medium text-[var(--text)]">{user.name}</span>
-                <span className="text-[11px] text-[var(--text-muted)]">{user.email}</span>
+                <span className="text-[13px] font-medium text-[var(--text)]">{user.displayName}</span>
+                <span className="text-[11px] text-[var(--text-muted)]">@{user.username}</span>
               </div>
             </div>
             <button
@@ -420,38 +413,16 @@ function AccountTab() {
               {signingOut ? "Signing out\u2026" : "Sign Out"}
             </button>
           </SettingsRow>
-          <SettingsRow>
-            <SettingsRowInfo name="Manage Account" desc="Profile, security, and connected accounts" />
-            <a
-              href="/account/settings"
-              className="px-3 py-2 text-[12px] text-[var(--text-muted)] hover:text-[var(--text-secondary)] hover:bg-[var(--bg-surface)] rounded-[var(--radius-md)] transition-[color,background-color] duration-200 ease-out"
-            >
-              Open
-            </a>
-          </SettingsRow>
         </section>
       ) : (
         <section className="flex flex-col gap-4">
           <SectionLabel>Account</SectionLabel>
           <div className="rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--bg-surface)] p-4 flex flex-col gap-3">
-            <p className="text-[13px] text-[var(--text-secondary)] leading-[1.6]">
+            <p className="text-[13px] text-[var(--text-secondary)] leading-[1.6] mb-1">
               Your progress is saved locally in this browser. Sign in to sync
               across devices and never lose your work.
             </p>
-            <div className="flex gap-2">
-              <a
-                href="/auth/sign-in"
-                className="px-4 py-2 rounded-[var(--radius-md)] text-[13px] font-semibold bg-[var(--accent)] text-[var(--accent-text-on)] transition-[background-color,box-shadow] duration-200 ease-out hover:bg-[var(--accent-hover)] hover:shadow-[0_0_20px_var(--accent-glow)]"
-              >
-                Sign In
-              </a>
-              <a
-                href="/auth/sign-up"
-                className="px-4 py-2 rounded-[var(--radius-md)] text-[13px] font-semibold bg-[var(--bg-elevated)] text-[var(--text-secondary)] border border-[var(--border-bright)] transition-[background-color,color] duration-200 ease-out hover:text-[var(--text)] hover:bg-[var(--bg-surface)]"
-              >
-                Sign Up
-              </a>
-            </div>
+            <AuthForms onSuccess={() => window.location.reload()} />
           </div>
         </section>
       )}

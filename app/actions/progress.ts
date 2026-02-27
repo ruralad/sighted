@@ -1,13 +1,13 @@
 "use server";
 
-import { auth } from "@/lib/auth/server";
+import { verifySession } from "@/lib/auth/server";
 import { db } from "@/lib/db";
 import { userProgress, userSettings } from "@/lib/db/schema";
 import { eq, sql } from "drizzle-orm";
 
 async function getUserId(): Promise<string | null> {
-  const { data: session } = await auth.getSession();
-  return session?.user?.id ?? null;
+  const session = await verifySession();
+  return session?.userId ?? null;
 }
 
 export interface ProgressRow {

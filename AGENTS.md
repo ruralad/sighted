@@ -11,9 +11,11 @@ Sighted 75 is a single-page React app for practicing LeetCode-style coding quest
 - **Framework:** Next.js 16 (App Router, Turbopack) + React 19 + TypeScript
 - **Styling:** Tailwind CSS v4 (utility-first, CSS custom properties for theme tokens)
 - **State management:** Zustand 5
+- **Auth:** Custom username/password — `jose` (JWT sessions) + `bcryptjs` (password hashing), no third-party auth library
+- **Database:** Neon Serverless Postgres (`@neondatabase/serverless`) + Drizzle ORM (`drizzle-orm`)
 - **Editor:** CodeMirror 6 + `@uiw/codemirror-themes-all` (31 syntax themes)
 - **Icons:** lucide-react (tree-shakable SVG icons)
-- **Persistence:** IndexedDB via `idb-keyval`
+- **Persistence:** IndexedDB via `idb-keyval` (local/guest), Neon Postgres (authenticated users)
 - **Linter:** oxlint
 - **Fonts:** JetBrains Mono (display/code) + IBM Plex Sans (body) via `next/font/google`
 
@@ -31,38 +33,56 @@ bun run lint       # lint with oxlint
 
 ```
 app/
-├── layout.tsx               # Root layout (server component): <html>, <body>, fonts, metadata
-├── page.tsx                 # Single page: "use client" wrapper rendering <App />
-└── globals.css              # Tailwind directives + theme tokens (6 variants) + keyframes + base styles
+├── layout.tsx                    # Root layout (server component): <html>, <body>, fonts, metadata
+├── page.tsx                      # Single page: "use client" wrapper rendering <App />
+├── globals.css                   # Tailwind directives + theme tokens (6 variants) + keyframes + base styles
+├── actions/
+│   ├── auth.ts                   # Server Actions: signUp, signIn, signOut (username/password)
+│   └── progress.ts               # Server Actions: getProgress, syncProgress, bulkSyncProgress, saveSettings, etc.
+└── api/
+    └── auth/
+        └── session/
+            └── route.ts          # GET /api/auth/session — returns current user from JWT cookie (used by authStore)
+proxy.ts                          # Next.js Proxy: optimistic cookie check for protected routes
 src/
-├── App.tsx                  # Root client component, hydrates stores, orchestrates layout
-├── components/              # Client components (all marked "use client")
-│   ├── CodeEditor.tsx       # CodeMirror 6 wrapper with 31 selectable themes, dynamic theming + user-configurable extensions
-│   ├── HintPanel.tsx        # Progressive hint reveal
-│   ├── LanguageSelector.tsx # Language tab selector (JS/Python/Go/Java active; Rust/C/C++ scaffolded)
-│   ├── OutputPanel.tsx      # Code execution output display
-│   ├── ProgressBar.tsx      # Completion progress indicator
-│   ├── QuestionCard.tsx     # Question display with numbered title + examples
-│   ├── QuestionsModal.tsx   # All-questions table modal with filters/sort
-│   └── SettingsModal.tsx    # Tabbed settings modal (Editor / Appearance / Account)
-├── store/                   # Zustand stores + IndexedDB layer (all "use client")
-│   ├── themeStore.ts        # Theme mode (dark/light) + palette (emerald/ocean/amber)
-│   ├── editorStore.ts       # Editor preferences (font, indentation, feature toggles, editorTheme, adaptAppTheme, zenFullscreen)
-│   ├── completionStore.ts   # Question completion tracking
-│   ├── questionStore.ts     # Current question selection + randomQuestion
-│   ├── codeRunnerStore.ts   # Code execution state
-│   └── db.ts                # IndexedDB persistence functions
-├── runners/                 # Language-specific code execution (all "use client")
-│   ├── javaRunner.ts        # Stub — Java not supported in browser (like Go)
-│   ├── jsRunner.ts          # In-browser JS execution via Function()
-│   ├── pythonRunner.ts      # In-browser Python via Pyodide (lazy-loaded)
-│   └── goRunner.ts          # Stub — Go not supported in browser
+├── App.tsx                       # Root client component, hydrates stores, orchestrates layout
+├── components/                   # Client components (all marked "use client")
+│   ├── AuthForms.tsx             # Sign-in / sign-up form (username + password), calls Server Actions
+│   ├── CodeEditor.tsx            # CodeMirror 6 wrapper with 31 selectable themes, dynamic theming + user-configurable extensions
+│   ├── HintPanel.tsx             # Progressive hint reveal
+│   ├── LanguageSelector.tsx      # Language tab selector (JS/Python/Go/Java active; Rust/C/C++ scaffolded)
+│   ├── OutputPanel.tsx           # Code execution output display
+│   ├── ProgressBar.tsx           # Completion progress indicator
+│   ├── QuestionCard.tsx          # Question display with numbered title + examples
+│   ├── QuestionsModal.tsx        # All-questions table modal with filters/sort
+│   ├── SettingsModal.tsx         # Tabbed settings modal (Editor / Appearance / Account)
+│   └── WelcomeGate.tsx           # First-visit gate: sign in, sign up, or continue locally (guest)
+├── lib/
+│   ├── auth/
+│   │   ├── session.ts            # JWT encrypt/decrypt via jose, cookie create/delete/get (server-only)
+│   │   └── server.ts             # verifySession() / requireSession() helpers (server-only)
+│   └── db/
+│       ├── index.ts              # Drizzle client (neon-http driver)
+│       └── schema.ts             # Drizzle schema: users, sessions, userProgress, userSettings
+├── store/                        # Zustand stores + IndexedDB layer (all "use client")
+│   ├── themeStore.ts             # Theme mode (dark/light) + palette (emerald/ocean/amber)
+│   ├── editorStore.ts            # Editor preferences (font, indentation, feature toggles, editorTheme, adaptAppTheme, zenFullscreen)
+│   ├── completionStore.ts        # Question completion tracking
+│   ├── questionStore.ts          # Current question selection + randomQuestion
+│   ├── codeRunnerStore.ts        # Code execution state
+│   ├── authStore.ts              # Auth state: fetches /api/auth/session on hydrate, exposes user/isAuthenticated
+│   └── db.ts                     # IndexedDB persistence functions
+├── runners/                      # Language-specific code execution (all "use client")
+│   ├── javaRunner.ts             # Stub — Java not supported in browser (like Go)
+│   ├── jsRunner.ts               # In-browser JS execution via Function()
+│   ├── pythonRunner.ts           # In-browser Python via Pyodide (lazy-loaded)
+│   └── goRunner.ts               # Stub — Go not supported in browser
 ├── themes/
-│   └── editorThemeColors.ts # Maps each editor theme to app CSS variables for "Adapt App Theme" feature
+│   └── editorThemeColors.ts      # Maps each editor theme to app CSS variables for "Adapt App Theme" feature
 ├── data/
-│   └── questions.json       # Question bank (75 Blind questions with keywords + 7-language scaffolds)
+│   └── questions.json            # Question bank (75 Blind questions with keywords + 7-language scaffolds)
 └── types/
-    └── question.ts          # TypeScript interfaces
+    └── question.ts               # TypeScript interfaces
 ```
 
 ## Conventions
@@ -72,6 +92,8 @@ src/
 The app uses Next.js App Router with a hybrid rendering strategy:
 - **Server components:** `app/layout.tsx` handles `<html>`, `<body>`, font loading, and metadata.
 - **Client components:** Everything under `src/` is marked `"use client"` since the app relies heavily on browser APIs (IndexedDB, CodeMirror, Pyodide, Fullscreen API).
+- **Server Actions:** `app/actions/auth.ts` (sign up/in/out) and `app/actions/progress.ts` (CRUD for user progress and settings). All Server Actions use `"use server"` and validate sessions via `verifySession()`.
+- **Route Handlers:** `app/api/auth/session/route.ts` — a single `GET` endpoint for client-side session hydration.
 - **Path alias:** `@/*` maps to `./src/*` (configured in `tsconfig.json`).
 
 ### State Management
@@ -124,6 +146,38 @@ Zen Mode strips the UI down to just the code editor filling the viewport. Activa
 - Decorative SVGs must have `aria-hidden="true"`.
 - All interactive elements must have visible `focus-visible` states.
 - Modals must close on Escape and overlay click.
+
+### Authentication
+
+The app uses a custom username/password auth system with no third-party auth library. There is no email — only a unique username and a secure password.
+
+**How it works:**
+
+1. **Sign up / Sign in** — `app/actions/auth.ts` exposes `signUp()`, `signIn()`, `signOut()` Server Actions. Passwords are hashed with `bcryptjs` (cost 12). Usernames are lowercased, unique, and restricted to `[a-zA-Z0-9_.-]` (3–30 chars).
+2. **Sessions** — Stateless JWT tokens signed with `HS256` via `jose`. The JWT payload contains `{userId, username, displayName, expiresAt}`. Stored in an `httpOnly` cookie named `sighted75:session` with 30-day expiry.
+3. **Server-side checks** — `src/lib/auth/server.ts` exports `verifySession()` (returns payload or `null`) and `requireSession()` (throws if unauthenticated). Used by Server Actions in `app/actions/progress.ts`.
+4. **Client-side hydration** — `authStore` fetches `GET /api/auth/session` on mount to populate `user` / `isAuthenticated` state. No auth client library is used.
+5. **Proxy** — `proxy.ts` performs an optimistic cookie-presence check for protected routes (currently `/account/*`).
+6. **Guest mode** — Users can skip auth entirely via "Continue Locally" on the `WelcomeGate`. Progress is stored in IndexedDB only. The `localStorage` key `sighted75:auth-choice` tracks whether the user chose `"local"` or `"authenticated"`.
+
+**Environment variables:** `AUTH_SECRET` (HS256 signing key), `DATABASE_URL` (Neon Postgres connection string).
+
+**Do not** introduce a third-party auth library (NextAuth, Better Auth, Clerk, etc.). Keep auth self-contained in the files listed above.
+
+### Database
+
+Neon Serverless Postgres via `@neondatabase/serverless` + Drizzle ORM. Schema lives in `src/lib/db/schema.ts`.
+
+**Tables:**
+
+| Table | Purpose |
+|-------|---------|
+| `users` | `id` (text PK, UUID), `username` (unique), `password_hash`, `display_name`, `created_at` |
+| `sessions` | `id` (text PK), `user_id` FK → users, `expires_at`, `created_at` (reserved for future DB-backed sessions) |
+| `user_progress` | Per-user per-question progress: completed, attempts, revisits, best solution, language, time spent. Unique index on `(user_id, question_id)`. |
+| `user_settings` | Per-user JSON blobs for theme and editor preferences. `user_id` PK FK → users. |
+
+**Schema changes:** Use `bunx drizzle-kit push` to push schema changes to Neon (no migration files). Config in `drizzle.config.ts`.
 
 ### IndexedDB Keys
 

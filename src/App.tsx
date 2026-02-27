@@ -19,7 +19,8 @@ import { OutputPanel } from "./components/OutputPanel";
 import { SettingsModal } from "./components/SettingsModal";
 import { QuestionsModal } from "./components/QuestionsModal";
 import { WelcomeGate, getAuthChoice, setAuthChoice } from "./components/WelcomeGate";
-import { UserButton } from "@neondatabase/auth/react";
+import { AuthForms } from "./components/AuthForms";
+import { signOut } from "../app/actions/auth";
 
 const listIcon = (
   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -108,7 +109,12 @@ export function App() {
   }, [completionLoading, hydrateQuestion]);
 
   if (showWelcome) {
-    return <WelcomeGate onContinueLocally={() => setShowWelcome(false)} />;
+    return (
+      <WelcomeGate
+        onContinueLocally={() => setShowWelcome(false)}
+        onAuthenticated={() => window.location.reload()}
+      />
+    );
   }
 
   if (!themeLoaded || completionLoading || questionLoading || !editorLoaded) {
@@ -176,6 +182,89 @@ function AllDoneScreen({ totalQuestions }: { totalQuestions: number }) {
   );
 }
 
+function UserMenu() {
+  const user = useAuthStore((s) => s.user);
+  const [open, setOpen] = useState(false);
+  const [signingOut, setSigningOut] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const handleClick = (e: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
+  }, [open]);
+
+  const handleSignOut = useCallback(async () => {
+    setSigningOut(true);
+    await signOut().catch(() => {});
+    window.location.reload();
+  }, []);
+
+  const initial = user?.displayName?.charAt(0)?.toUpperCase() ?? user?.username?.charAt(0)?.toUpperCase() ?? "?";
+
+  return (
+    <div className="relative" ref={menuRef}>
+      <button
+        className="flex items-center justify-center w-[34px] h-[34px] rounded-full bg-[var(--accent)] text-[var(--accent-text-on)] text-[13px] font-bold cursor-pointer transition-[box-shadow] duration-200 ease-out hover:shadow-[0_0_0_3px_var(--accent-dim)]"
+        onClick={() => setOpen((p) => !p)}
+        aria-label="User menu"
+      >
+        {initial}
+      </button>
+      {open ? (
+        <div className="absolute right-0 top-[calc(100%+6px)] w-[200px] bg-[var(--bg-surface)] border border-[var(--border-bright)] rounded-[var(--radius-md)] shadow-[var(--shadow-dialog)] py-1.5 z-50 animate-fade-in-fast">
+          <div className="px-3 py-2 border-b border-[var(--border)]">
+            <p className="text-[13px] font-medium text-[var(--text)] truncate">{user?.displayName}</p>
+            <p className="text-[11px] text-[var(--text-muted)] truncate">@{user?.username}</p>
+          </div>
+          <button
+            className="w-full text-left px-3 py-2 text-[13px] text-[var(--text-muted)] hover:text-[var(--text)] hover:bg-[var(--bg-elevated)] transition-[color,background-color] duration-150"
+            onClick={handleSignOut}
+            disabled={signingOut}
+          >
+            {signingOut ? "Signing out\u2026" : "Sign Out"}
+          </button>
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+function SignInModal({ open, onClose }: { open: boolean; onClose: () => void }) {
+  useEffect(() => {
+    if (!open) return;
+    const handleKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+    document.addEventListener("keydown", handleKey);
+    return () => document.removeEventListener("keydown", handleKey);
+  }, [open, onClose]);
+
+  if (!open) return null;
+
+  return (
+    <div
+      className="fixed inset-0 bg-[var(--overlay-bg)] backdrop-blur-[8px] flex items-center justify-center z-[200] animate-fade-in-fast overscroll-contain"
+      onClick={onClose}
+    >
+      <div
+        className="bg-[var(--bg-surface)] border border-[var(--border-bright)] rounded-[var(--radius-lg)] p-6 w-[400px] max-w-[calc(100vw-32px)] shadow-[var(--shadow-dialog)] animate-fade-in-up-dialog"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <h2 className="font-[family-name:var(--font-display)] text-[18px] font-bold text-[var(--text)] tracking-[-0.02em] text-center mb-5">
+          Sign in to Sighted <span className="text-[var(--accent)]">75</span>
+        </h2>
+        <AuthForms onSuccess={() => window.location.reload()} />
+      </div>
+    </div>
+  );
+}
+
 function AppInner() {
   const completed = useCompletionStore((s) => s.completed);
   const toggleComplete = useCompletionStore((s) => s.toggleComplete);
@@ -202,6 +291,7 @@ function AppInner() {
   const [language, setLanguage] = useState<Language>("javascript");
   const [showSettings, setShowSettings] = useState(false);
   const [showQuestions, setShowQuestions] = useState(false);
+  const [showSignIn, setShowSignIn] = useState(false);
   const [zenMode, setZenMode] = useState(false);
   const codeRef = useRef("");
 
@@ -381,16 +471,16 @@ function AppInner() {
             Random
           </button>
           {isAuthenticated ? (
-            <UserButton size="sm" />
+            <UserMenu />
           ) : (
-            <a
-              href="/auth/sign-in"
+            <button
               className="inline-flex items-center gap-1.5 px-3 py-2 rounded-[var(--radius-md)] text-[12px] font-medium text-[var(--text-muted)] transition-[color,background-color] duration-200 ease-out hover:text-[var(--text-secondary)] hover:bg-[var(--bg-surface)]"
               title="Sign in to sync progress"
+              onClick={() => setShowSignIn(true)}
             >
               <LogIn size={14} />
               Sign in
-            </a>
+            </button>
           )}
         </div>
       </header>
@@ -448,6 +538,7 @@ function AppInner() {
         currentQuestionId={question?.id ?? null}
         onSelectQuestion={handleSelectQuestion}
       />
+      <SignInModal open={showSignIn} onClose={() => setShowSignIn(false)} />
     </div>
   );
 }

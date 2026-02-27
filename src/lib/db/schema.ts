@@ -1,8 +1,6 @@
 import {
   pgTable,
-  pgSchema,
   serial,
-  uuid,
   text,
   integer,
   boolean,
@@ -11,19 +9,30 @@ import {
   uniqueIndex,
 } from "drizzle-orm/pg-core";
 
-const neonAuthSchema = pgSchema("neon_auth");
+export const users = pgTable("users", {
+  id: text("id").primaryKey(),
+  username: text("username").notNull().unique(),
+  passwordHash: text("password_hash").notNull(),
+  displayName: text("display_name").notNull(),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
 
-const neonAuthUsers = neonAuthSchema.table("user", {
-  id: uuid("id").primaryKey(),
+export const sessions = pgTable("sessions", {
+  id: text("id").primaryKey(),
+  userId: text("user_id")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
+  expiresAt: timestamp("expires_at").notNull(),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 
 export const userProgress = pgTable(
   "user_progress",
   {
     id: serial("id").primaryKey(),
-    userId: uuid("user_id")
+    userId: text("user_id")
       .notNull()
-      .references(() => neonAuthUsers.id, { onDelete: "cascade" }),
+      .references(() => users.id, { onDelete: "cascade" }),
     questionId: integer("question_id").notNull(),
     completed: boolean("completed").default(false).notNull(),
     completedAt: timestamp("completed_at"),
@@ -38,9 +47,9 @@ export const userProgress = pgTable(
 );
 
 export const userSettings = pgTable("user_settings", {
-  userId: uuid("user_id")
+  userId: text("user_id")
     .primaryKey()
-    .references(() => neonAuthUsers.id, { onDelete: "cascade" }),
+    .references(() => users.id, { onDelete: "cascade" }),
   theme: jsonb("theme"),
   editor: jsonb("editor"),
 });

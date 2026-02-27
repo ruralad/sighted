@@ -1,13 +1,11 @@
 "use client";
 
 import { create } from "zustand";
-import { authClient } from "../lib/auth/client";
 
 interface AuthUser {
   id: string;
-  name: string;
-  email: string;
-  image?: string | null;
+  username: string;
+  displayName: string;
 }
 
 interface AuthStore {
@@ -28,17 +26,12 @@ export const useAuthStore = create<AuthStore>((setState) => ({
     if (didHydrate) return;
     didHydrate = true;
 
-    authClient
-      .getSession()
-      .then(({ data }) => {
-        if (data?.user) {
+    fetch("/api/auth/session")
+      .then((r) => r.json())
+      .then((data: { user: AuthUser | null }) => {
+        if (data.user) {
           setState({
-            user: {
-              id: data.user.id,
-              name: data.user.name,
-              email: data.user.email,
-              image: data.user.image,
-            },
+            user: data.user,
             isAuthenticated: true,
             isLoading: false,
           });

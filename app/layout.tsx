@@ -1,6 +1,5 @@
 import type { Metadata, Viewport } from "next";
 import { JetBrains_Mono, IBM_Plex_Sans } from "next/font/google";
-import { AuthProvider } from "@/lib/auth/AuthProvider";
 import "./globals.css";
 
 const jetbrainsMono = JetBrains_Mono({
@@ -35,9 +34,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" suppressHydrationWarning className={`${jetbrainsMono.variable} ${ibmPlexSans.variable}`}>
-      <body>
-        <AuthProvider>{children}</AuthProvider>
-      </body>
+      <body>{children}</body>
     </html>
   );
 }

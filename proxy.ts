@@ -1,8 +1,14 @@
-import { auth } from "@/lib/auth/server";
+import { NextRequest, NextResponse } from "next/server";
 
-export default auth.middleware({
-  loginUrl: "/auth/sign-in",
-});
+const COOKIE_NAME = "sighted75:session";
+
+export function proxy(request: NextRequest) {
+  const sessionCookie = request.cookies.get(COOKIE_NAME)?.value;
+  if (!sessionCookie) {
+    return NextResponse.redirect(new URL("/", request.url));
+  }
+  return NextResponse.next();
+}
 
 export const config = {
   matcher: ["/account/:path*"],

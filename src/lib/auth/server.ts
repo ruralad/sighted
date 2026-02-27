@@ -1,8 +1,12 @@
-import { createNeonAuth } from "@neondatabase/auth/next/server";
+import "server-only";
+import { getSession, type SessionPayload } from "./session";
 
-export const auth = createNeonAuth({
-  baseUrl: process.env.NEON_AUTH_BASE_URL!,
-  cookies: {
-    secret: process.env.NEON_AUTH_COOKIE_SECRET!,
-  },
-});
+export async function verifySession(): Promise<SessionPayload | null> {
+  return getSession();
+}
+
+export async function requireSession(): Promise<SessionPayload> {
+  const session = await getSession();
+  if (!session) throw new Error("Unauthorized");
+  return session;
+}
