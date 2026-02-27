@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useCallback, useRef, useEffect } from "react";
-import { Eye, EyeOff, Shuffle } from "lucide-react";
+import { Eye, EyeOff, Shuffle, MessageCircle } from "lucide-react";
 import type { Language } from "./types/question";
 import { useThemeStore } from "./store/themeStore";
 import { useCompletionStore } from "./store/completionStore";
@@ -20,6 +20,8 @@ import { SettingsModal } from "./components/SettingsModal";
 import { QuestionsModal } from "./components/QuestionsModal";
 import { WelcomeGate, getAuthChoice, setAuthChoice } from "./components/WelcomeGate";
 import { Timer } from "./components/Timer";
+import { ChatModal } from "./components/ChatModal";
+import { useChatStore } from "./store/chatStore";
 
 const listIcon = (
   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -205,6 +207,9 @@ function AppInner() {
 
   const editorSettings = useEditorStore((s) => s.settings);
 
+  const setChatOpen = useChatStore((s) => s.setOpen);
+  const openChat = useCallback(() => setChatOpen(true), [setChatOpen]);
+
   const [language, setLanguage] = useState<Language>("javascript");
   const [showSettings, setShowSettings] = useState(false);
   const [showQuestions, setShowQuestions] = useState(false);
@@ -379,6 +384,16 @@ function AppInner() {
           >
             <Eye size={18} />
           </button>
+          {isAuthenticated ? (
+            <button
+              className="flex items-center justify-center w-[34px] h-[34px] rounded-[var(--radius-md)] text-[var(--text-muted)] transition-[color,background-color] duration-200 ease-out cursor-pointer hover:text-[var(--text)] hover:bg-[var(--bg-surface)]"
+              onClick={openChat}
+              aria-label="Chat"
+              title="Encrypted Chat"
+            >
+              <MessageCircle size={18} />
+            </button>
+          ) : null}
           <button
             className="flex items-center justify-center w-[34px] h-[34px] rounded-[var(--radius-md)] text-[var(--text-muted)] transition-[color,background-color] duration-200 ease-out cursor-pointer hover:text-[var(--text)] hover:bg-[var(--bg-surface)] [&:hover_svg]:rotate-45 [&_svg]:transition-transform [&_svg]:duration-300 [&_svg]:ease-out"
             onClick={openSettings}
@@ -462,6 +477,7 @@ function AppInner() {
         currentQuestionId={question?.id ?? null}
         onSelectQuestion={handleSelectQuestion}
       />
+      {isAuthenticated ? <ChatModal /> : null}
     </div>
   );
 }
