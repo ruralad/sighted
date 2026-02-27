@@ -1,5 +1,9 @@
+"use client";
+
 import { create } from "zustand";
 import { get, set } from "idb-keyval";
+import { saveSettings, getSettings } from "../../app/actions/progress";
+import { useAuthStore } from "./authStore";
 
 export type EditorFontFamily =
   | "JetBrains Mono"
@@ -131,6 +135,16 @@ interface EditorStore {
 }
 
 let didHydrate = false;
+let editorSyncTimer: ReturnType<typeof setTimeout> | null = null;
+
+function debouncedEditorSync() {
+  if (editorSyncTimer) clearTimeout(editorSyncTimer);
+  editorSyncTimer = setTimeout(() => {
+    if (!useAuthStore.getState().isAuthenticated) return;
+    const editor = useEditorStore.getState().settings;
+    saveSettings(null, editor).catch(() => {});
+  }, 2000);
+}
 
 export const useEditorStore = create<EditorStore>((setState, getState) => ({
   settings: DEFAULT_EDITOR,
@@ -141,8 +155,17 @@ export const useEditorStore = create<EditorStore>((setState, getState) => ({
     didHydrate = true;
 
     const stored = await get<EditorSettings>(EDITOR_KEY);
-    // Merge stored values over defaults so newly added keys get their defaults
-    const resolved = stored ? { ...DEFAULT_EDITOR, ...stored } : DEFAULT_EDITOR;
+    let resolved = stored ? { ...DEFAULT_EDITOR, ...stored } : DEFAULT_EDITOR;
+
+    if (useAuthStore.getState().isAuthenticated) {
+      const serverSettings = await getSettings().catch(() => null);
+      if (serverSettings?.editor) {
+        const serverEditor = serverSettings.editor as Partial<EditorSettings>;
+        resolved = { ...DEFAULT_EDITOR, ...resolved, ...serverEditor };
+        set(EDITOR_KEY, resolved);
+      }
+    }
+
     setState({ settings: resolved, loaded: true });
   },
 
@@ -151,10 +174,12 @@ export const useEditorStore = create<EditorStore>((setState, getState) => ({
     const next = { ...settings, [key]: value };
     setState({ settings: next });
     set(EDITOR_KEY, next);
+    debouncedEditorSync();
   },
 
   resetDefaults: () => {
     setState({ settings: DEFAULT_EDITOR });
     set(EDITOR_KEY, DEFAULT_EDITOR);
+    debouncedEditorSync();
   },
 }));

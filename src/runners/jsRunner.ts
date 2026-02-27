@@ -1,3 +1,5 @@
+"use client";
+
 import type { RunResult } from "../store/codeRunnerStore";
 
 export async function runJavaScript(code: string): Promise<RunResult> {

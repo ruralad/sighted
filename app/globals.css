@@ -1,0 +1,448 @@
+@import "tailwindcss";
+@import "@neondatabase/auth/ui/tailwind";
+
+/* ============================================================
+   TAILWIND THEME EXTENSIONS
+   ============================================================ */
+
+@theme {
+  --font-display: var(--font-jetbrains), "JetBrains Mono", monospace;
+  --font-body: var(--font-ibm-plex), "IBM Plex Sans", -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-mono: var(--font-jetbrains), "JetBrains Mono", "Fira Code", monospace;
+  --default-font-family: var(--font-ibm-plex), "IBM Plex Sans", -apple-system, BlinkMacSystemFont, sans-serif;
+
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+
+  --animate-spin: spin 0.8s linear infinite;
+  --animate-fade-in-up: fadeInUp 0.4s ease-out;
+  --animate-fade-in: fadeIn 0.3s ease-out;
+  --animate-slide-in-left: slideInLeft 0.3s ease-out;
+  --animate-pulse-glow: pulseGlow 1.5s ease-out 1;
+  --animate-zen-fade-in: zenFadeIn 0.25s ease-out;
+  --animate-slide-up: slideUp 0.2s ease-out;
+  --animate-fade-in-up-fast: fadeInUp 0.25s ease-out both;
+  --animate-fade-in-fast: fadeIn 0.15s ease-out;
+  --animate-fade-in-up-dialog: fadeInUp 0.2s ease-out;
+}
+
+/* ============================================================
+   KEYFRAMES
+   ============================================================ */
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes slideInLeft {
+  from { opacity: 0; transform: translateX(-16px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+@keyframes pulseGlow {
+  0%, 100% { box-shadow: 0 0 0 0 var(--accent-glow); }
+  50% { box-shadow: 0 0 0 8px transparent; }
+}
+@keyframes zenFadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* ============================================================
+   THEME TOKENS — Dark Mode
+   ============================================================ */
+
+/* --- Emerald Dark --- */
+[data-mode="dark"][data-palette="emerald"] {
+  --bg-deep: #0F172A;
+  --bg-primary: #1E293B;
+  --bg-surface: #334155;
+  --bg-elevated: #475569;
+  --border: #334155;
+  --border-bright: #475569;
+  --text: #F8FAFC;
+  --text-secondary: #CBD5E1;
+  --text-muted: #64748B;
+  --accent: #22C55E;
+  --accent-hover: #16A34A;
+  --accent-dim: rgba(34, 197, 94, 0.15);
+  --accent-glow: rgba(34, 197, 94, 0.3);
+  --accent-text-on: #0F172A;
+  --selection-bg: rgba(34, 197, 94, 0.3);
+  --overlay-bg: rgba(15, 23, 42, 0.8);
+  --shadow-dialog: 0 4px 6px rgba(0, 0, 0, 0.1), 0 24px 60px rgba(0, 0, 0, 0.4);
+  --cm-bg: #0F172A;
+  --cm-gutter-bg: #0F172A;
+  --cm-gutter-border: #334155;
+  --cm-gutter-text: #64748B;
+  --cm-active-line-bg: rgba(34, 197, 94, 0.05);
+  --cm-active-gutter-bg: #1E293B;
+  --cm-selection-bg: rgba(34, 197, 94, 0.15);
+}
+
+/* --- Ocean Dark --- */
+[data-mode="dark"][data-palette="ocean"] {
+  --bg-deep: #0C1222;
+  --bg-primary: #162032;
+  --bg-surface: #1E3050;
+  --bg-elevated: #2A4068;
+  --border: #1E3050;
+  --border-bright: #2A4068;
+  --text: #F0F4F8;
+  --text-secondary: #B0C4DE;
+  --text-muted: #5A7A9E;
+  --accent: #3B82F6;
+  --accent-hover: #2563EB;
+  --accent-dim: rgba(59, 130, 246, 0.15);
+  --accent-glow: rgba(59, 130, 246, 0.3);
+  --accent-text-on: #0C1222;
+  --selection-bg: rgba(59, 130, 246, 0.3);
+  --overlay-bg: rgba(12, 18, 34, 0.8);
+  --shadow-dialog: 0 4px 6px rgba(0, 0, 0, 0.15), 0 24px 60px rgba(0, 0, 0, 0.5);
+  --cm-bg: #0C1222;
+  --cm-gutter-bg: #0C1222;
+  --cm-gutter-border: #1E3050;
+  --cm-gutter-text: #5A7A9E;
+  --cm-active-line-bg: rgba(59, 130, 246, 0.05);
+  --cm-active-gutter-bg: #162032;
+  --cm-selection-bg: rgba(59, 130, 246, 0.15);
+}
+
+/* --- Amber Dark --- */
+[data-mode="dark"][data-palette="amber"] {
+  --bg-deep: #1A1207;
+  --bg-primary: #27200E;
+  --bg-surface: #3D3418;
+  --bg-elevated: #544822;
+  --border: #3D3418;
+  --border-bright: #544822;
+  --text: #FEF9EF;
+  --text-secondary: #D4C9A8;
+  --text-muted: #8A7D5A;
+  --accent: #F59E0B;
+  --accent-hover: #D97706;
+  --accent-dim: rgba(245, 158, 11, 0.15);
+  --accent-glow: rgba(245, 158, 11, 0.3);
+  --accent-text-on: #1A1207;
+  --selection-bg: rgba(245, 158, 11, 0.3);
+  --overlay-bg: rgba(26, 18, 7, 0.8);
+  --shadow-dialog: 0 4px 6px rgba(0, 0, 0, 0.15), 0 24px 60px rgba(0, 0, 0, 0.5);
+  --cm-bg: #1A1207;
+  --cm-gutter-bg: #1A1207;
+  --cm-gutter-border: #3D3418;
+  --cm-gutter-text: #8A7D5A;
+  --cm-active-line-bg: rgba(245, 158, 11, 0.05);
+  --cm-active-gutter-bg: #27200E;
+  --cm-selection-bg: rgba(245, 158, 11, 0.15);
+}
+
+/* ============================================================
+   THEME TOKENS — Light Mode
+   ============================================================ */
+
+/* --- Emerald Light --- */
+[data-mode="light"][data-palette="emerald"] {
+  --bg-deep: #F8FAFC;
+  --bg-primary: #FFFFFF;
+  --bg-surface: #E2E8F0;
+  --bg-elevated: #CBD5E1;
+  --border: #E2E8F0;
+  --border-bright: #CBD5E1;
+  --text: #0F172A;
+  --text-secondary: #334155;
+  --text-muted: #64748B;
+  --accent: #16A34A;
+  --accent-hover: #15803D;
+  --accent-dim: rgba(22, 163, 74, 0.1);
+  --accent-glow: rgba(22, 163, 74, 0.2);
+  --accent-text-on: #FFFFFF;
+  --selection-bg: rgba(22, 163, 74, 0.2);
+  --overlay-bg: rgba(15, 23, 42, 0.4);
+  --shadow-dialog: 0 4px 6px rgba(0, 0, 0, 0.05), 0 24px 60px rgba(0, 0, 0, 0.15);
+  --cm-bg: #FFFFFF;
+  --cm-gutter-bg: #F8FAFC;
+  --cm-gutter-border: #E2E8F0;
+  --cm-gutter-text: #94A3B8;
+  --cm-active-line-bg: rgba(22, 163, 74, 0.06);
+  --cm-active-gutter-bg: #F1F5F9;
+  --cm-selection-bg: rgba(22, 163, 74, 0.15);
+}
+
+/* --- Ocean Light --- */
+[data-mode="light"][data-palette="ocean"] {
+  --bg-deep: #F0F5FF;
+  --bg-primary: #FFFFFF;
+  --bg-surface: #DBEAFE;
+  --bg-elevated: #BFDBFE;
+  --border: #DBEAFE;
+  --border-bright: #BFDBFE;
+  --text: #0C1222;
+  --text-secondary: #1E3A5F;
+  --text-muted: #5A7A9E;
+  --accent: #2563EB;
+  --accent-hover: #1D4ED8;
+  --accent-dim: rgba(37, 99, 235, 0.1);
+  --accent-glow: rgba(37, 99, 235, 0.2);
+  --accent-text-on: #FFFFFF;
+  --selection-bg: rgba(37, 99, 235, 0.2);
+  --overlay-bg: rgba(12, 18, 34, 0.4);
+  --shadow-dialog: 0 4px 6px rgba(0, 0, 0, 0.05), 0 24px 60px rgba(0, 0, 0, 0.15);
+  --cm-bg: #FFFFFF;
+  --cm-gutter-bg: #F0F5FF;
+  --cm-gutter-border: #DBEAFE;
+  --cm-gutter-text: #93A3C0;
+  --cm-active-line-bg: rgba(37, 99, 235, 0.06);
+  --cm-active-gutter-bg: #EEF2FF;
+  --cm-selection-bg: rgba(37, 99, 235, 0.15);
+}
+
+/* --- Amber Light (default) --- */
+:root,
+[data-mode="light"][data-palette="amber"] {
+  --bg-deep: #FFFBF0;
+  --bg-primary: #FFFFFF;
+  --bg-surface: #FEF3C7;
+  --bg-elevated: #FDE68A;
+  --border: #FEF3C7;
+  --border-bright: #FDE68A;
+  --text: #1A1207;
+  --text-secondary: #44390E;
+  --text-muted: #8A7D5A;
+  --accent: #D97706;
+  --accent-hover: #B45309;
+  --accent-dim: rgba(217, 119, 6, 0.1);
+  --accent-glow: rgba(217, 119, 6, 0.2);
+  --accent-text-on: #FFFFFF;
+  --selection-bg: rgba(217, 119, 6, 0.2);
+  --overlay-bg: rgba(26, 18, 7, 0.4);
+  --shadow-dialog: 0 4px 6px rgba(0, 0, 0, 0.05), 0 24px 60px rgba(0, 0, 0, 0.15);
+  --cm-bg: #FFFFFF;
+  --cm-gutter-bg: #FFFBF0;
+  --cm-gutter-border: #FEF3C7;
+  --cm-gutter-text: #B5A67A;
+  --cm-active-line-bg: rgba(217, 119, 6, 0.06);
+  --cm-active-gutter-bg: #FFF8E1;
+  --cm-selection-bg: rgba(217, 119, 6, 0.15);
+}
+
+/* ============================================================
+   SEMANTIC TOKENS (palette-independent)
+   ============================================================ */
+
+:root,
+[data-mode="light"] {
+  --green: #16A34A;
+  --green-dim: rgba(22, 163, 74, 0.1);
+  --yellow: #CA8A04;
+  --yellow-dim: rgba(202, 138, 4, 0.1);
+  --red: #DC2626;
+  --red-dim: rgba(220, 38, 38, 0.1);
+  --blue: #2563EB;
+  --blue-dim: rgba(37, 99, 235, 0.1);
+  --radius: 8px;
+}
+
+[data-mode="dark"] {
+  --green: #22C55E;
+  --green-dim: rgba(34, 197, 94, 0.15);
+  --yellow: #EAB308;
+  --yellow-dim: rgba(234, 179, 8, 0.12);
+  --red: #EF4444;
+  --red-dim: rgba(239, 68, 68, 0.12);
+  --blue: #3B82F6;
+  --blue-dim: rgba(59, 130, 246, 0.12);
+}
+
+/* ============================================================
+   BASE STYLES (in @layer base so Tailwind utilities can override)
+   ============================================================ */
+
+@layer base {
+  html {
+    color-scheme: light;
+  }
+  [data-mode="dark"] {
+    color-scheme: dark;
+  }
+
+  html, body {
+    height: 100%;
+    width: 100%;
+    overflow: hidden;
+    touch-action: manipulation;
+  }
+
+  body {
+    font-family: var(--font-body);
+    font-size: 14px;
+    font-weight: 400;
+    line-height: 1.6;
+    background: var(--bg-deep);
+    color: var(--text);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    transition: background-color 0.3s ease, color 0.3s ease;
+  }
+
+  button {
+    cursor: pointer;
+    font-family: inherit;
+    font-size: inherit;
+    outline: none;
+    background: none;
+    color: inherit;
+  }
+  button:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+  }
+  button:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
+
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb {
+    background: var(--bg-surface);
+    border-radius: 3px;
+  }
+  ::-webkit-scrollbar-thumb:hover { background: var(--bg-elevated); }
+
+  ::selection {
+    background: var(--selection-bg);
+    color: var(--text);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* ============================================================
+   CODEMIRROR OVERRIDES (can't target CM internals with Tailwind)
+   ============================================================ */
+
+.code-editor {
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+.code-editor .cm-editor {
+  height: 100%;
+  transition: background-color 0.3s ease;
+}
+
+/* ============================================================
+   CUSTOM TOGGLE SWITCH (complex pseudo-element styling)
+   ============================================================ */
+
+.settings-toggle {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+.settings-toggle input {
+  position: absolute;
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+.settings-toggle__track {
+  position: relative;
+  width: 40px;
+  height: 22px;
+  border-radius: 11px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-bright);
+  transition: background-color 0.2s ease, border-color 0.2s ease;
+}
+.settings-toggle__track::after {
+  content: "";
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--text-muted);
+  transition: transform 0.2s ease, background-color 0.2s ease;
+}
+.settings-toggle input:checked + .settings-toggle__track {
+  background: var(--accent-dim);
+  border-color: var(--accent);
+}
+.settings-toggle input:checked + .settings-toggle__track::after {
+  transform: translateX(18px);
+  background: var(--accent);
+}
+
+/* ============================================================
+   CUSTOM RANGE SLIDER (complex pseudo-element styling)
+   ============================================================ */
+
+.settings-slider {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 130px;
+  height: 6px;
+  border-radius: 3px;
+  background: var(--bg-elevated);
+  outline: none;
+  cursor: pointer;
+}
+.settings-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--accent);
+  border: 2px solid var(--bg-surface);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+  cursor: pointer;
+  transition: transform 0.15s ease;
+}
+.settings-slider::-webkit-slider-thumb:hover {
+  transform: scale(1.15);
+}
+.settings-slider::-moz-range-thumb {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--accent);
+  border: 2px solid var(--bg-surface);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+  cursor: pointer;
+}
+
+/* ============================================================
+   OUTPUT PANEL SPINNER (pseudo-element based)
+   ============================================================ */
+
+.output-spinner::before {
+  content: "";
+  width: 10px;
+  height: 10px;
+  border: 2px solid var(--yellow);
+  border-top-color: transparent;
+  border-radius: 50%;
+  animation: spin 0.6s linear infinite;
+}

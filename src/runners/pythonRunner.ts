@@ -1,3 +1,5 @@
+"use client";
+
 import type { RunResult } from "../store/codeRunnerStore";
 
 // Pyodide is ~15MB — lazy-loaded on first Python run and cached for subsequent runs.

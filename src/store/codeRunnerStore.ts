@@ -1,3 +1,5 @@
+"use client";
+
 import { create } from "zustand";
 import type { Language } from "../types/question";
 import { runJavaScript } from "../runners/jsRunner";

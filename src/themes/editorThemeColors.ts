@@ -1,3 +1,5 @@
+"use client";
+
 import type { EditorThemeId } from "../store/editorStore";
 
 /**

@@ -1,3 +1,5 @@
+"use client";
+
 // Thin persistence layer over IndexedDB using idb-keyval's default store.
 // All keys are prefixed with "sighted75:" to namespace within the shared DB.
 import { get, set, del } from "idb-keyval";

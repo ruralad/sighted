@@ -1,11 +1,14 @@
+"use client";
+
 import { useState, useCallback, useRef, useEffect } from "react";
-import { Eye, EyeOff, Shuffle } from "lucide-react";
+import { Eye, EyeOff, Shuffle, LogIn } from "lucide-react";
 import type { Language } from "./types/question";
 import { useThemeStore } from "./store/themeStore";
 import { useCompletionStore } from "./store/completionStore";
 import { useQuestionStore } from "./store/questionStore";
 import { useCodeRunnerStore } from "./store/codeRunnerStore";
 import { useEditorStore } from "./store/editorStore";
+import { useAuthStore } from "./store/authStore";
 import { saveSolution } from "./store/db";
 import { applyAppThemeOverride } from "./themes/editorThemeColors";
 import { ProgressBar } from "./components/ProgressBar";
@@ -15,16 +18,13 @@ import { CodeEditor } from "./components/CodeEditor";
 import { OutputPanel } from "./components/OutputPanel";
 import { SettingsModal } from "./components/SettingsModal";
 import { QuestionsModal } from "./components/QuestionsModal";
+import { WelcomeGate, getAuthChoice, setAuthChoice } from "./components/WelcomeGate";
+import { UserButton } from "@neondatabase/auth/react";
 
-// Hoisted outside component to avoid re-creating SVG elements on every render
 const listIcon = (
   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <line x1="8" y1="6" x2="21" y2="6" />
-    <line x1="8" y1="12" x2="21" y2="12" />
-    <line x1="8" y1="18" x2="21" y2="18" />
-    <line x1="3" y1="6" x2="3.01" y2="6" />
-    <line x1="3" y1="12" x2="3.01" y2="12" />
-    <line x1="3" y1="18" x2="3.01" y2="18" />
+    <line x1="8" y1="6" x2="21" y2="6" /><line x1="8" y1="12" x2="21" y2="12" /><line x1="8" y1="18" x2="21" y2="18" />
+    <line x1="3" y1="6" x2="3.01" y2="6" /><line x1="3" y1="12" x2="3.01" y2="12" /><line x1="3" y1="18" x2="3.01" y2="18" />
   </svg>
 );
 
@@ -36,12 +36,16 @@ const gearIcon = (
 );
 
 const loadingSpinner = (
-  <div className="app-loading">
-    <div className="spinner" />
+  <div className="h-full flex items-center justify-center flex-col gap-6 bg-[var(--bg-deep)]">
+    <div className="w-7 h-7 border-[3px] border-[var(--bg-surface)] border-t-[var(--accent)] rounded-full animate-spin" />
   </div>
 );
 
 export function App() {
+  const authLoading = useAuthStore((s) => s.isLoading);
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
+  const hydrateAuth = useAuthStore((s) => s.hydrate);
+
   const themeLoaded = useThemeStore((s) => s.loaded);
   const hydrateTheme = useThemeStore((s) => s.hydrate);
 
@@ -54,17 +58,33 @@ export function App() {
   const editorLoaded = useEditorStore((s) => s.loaded);
   const hydrateEditor = useEditorStore((s) => s.hydrate);
 
+  const [showWelcome, setShowWelcome] = useState(false);
+  const [welcomeChecked, setWelcomeChecked] = useState(false);
+
   useEffect(() => {
+    hydrateAuth();
+  }, [hydrateAuth]);
+
+  // After auth resolves, decide whether to show the welcome gate
+  useEffect(() => {
+    if (authLoading) return;
+    if (isAuthenticated) {
+      setAuthChoice("authenticated");
+      setWelcomeChecked(true);
+    } else {
+      const choice = getAuthChoice();
+      setShowWelcome(!choice);
+      setWelcomeChecked(true);
+    }
+  }, [authLoading, isAuthenticated]);
+
+  // Hydrate stores only after auth is resolved and welcome gate is dismissed
+  useEffect(() => {
+    if (!welcomeChecked || showWelcome) return;
     hydrateTheme();
-  }, [hydrateTheme]);
-
-  useEffect(() => {
     hydrateCompletion();
-  }, [hydrateCompletion]);
-
-  useEffect(() => {
     hydrateEditor();
-  }, [hydrateEditor]);
+  }, [welcomeChecked, showWelcome, hydrateTheme, hydrateCompletion, hydrateEditor]);
 
   const editorTheme = useEditorStore((s) => s.settings.editorTheme);
   const adaptAppTheme = useEditorStore((s) => s.settings.adaptAppTheme);
@@ -75,8 +95,6 @@ export function App() {
     return () => applyAppThemeOverride("auto", false);
   }, [editorLoaded, editorTheme, adaptAppTheme]);
 
-  // Track completed set via ref so questionStore.hydrate() gets the latest
-  // value without adding `completed` as a dependency (which would re-trigger hydration)
   const completedRef = useRef(useCompletionStore.getState().completed);
   useEffect(() => {
     return useCompletionStore.subscribe((s) => {
@@ -88,6 +106,10 @@ export function App() {
     if (completionLoading) return;
     hydrateQuestion(completedRef.current);
   }, [completionLoading, hydrateQuestion]);
+
+  if (showWelcome) {
+    return <WelcomeGate onContinueLocally={() => setShowWelcome(false)} />;
+  }
 
   if (!themeLoaded || completionLoading || questionLoading || !editorLoaded) {
     return loadingSpinner;
@@ -106,22 +128,43 @@ function AllDoneScreen({ totalQuestions }: { totalQuestions: number }) {
   }, [resetProgress]);
 
   return (
-    <div className="app-done">
-      <div className="app-done__content">
-        <h1>All Done!</h1>
-        <p>You've completed all {totalQuestions} questions. Amazing work!</p>
-        <button className="btn btn--primary" onClick={() => setConfirming(true)}>
+    <div className="h-full flex items-center justify-center flex-col gap-6 bg-[var(--bg-deep)]">
+      <div className="text-center flex flex-col items-center gap-5 animate-fade-in-up">
+        <h1 className="font-[family-name:var(--font-display)] text-[2.8rem] font-bold text-[var(--accent)] tracking-[-0.03em] text-balance">
+          All Done!
+        </h1>
+        <p className="text-[var(--text-secondary)] text-[15px] max-w-[360px] leading-[1.7]">
+          You've completed all {totalQuestions} questions. Amazing work!
+        </p>
+        <button
+          className="px-4 py-2 rounded-[var(--radius-md)] text-[13px] font-semibold bg-[var(--accent)] text-[var(--accent-text-on)] transition-[background-color,box-shadow] duration-200 ease-out hover:bg-[var(--accent-hover)] hover:shadow-[0_0_20px_var(--accent-glow)]"
+          onClick={() => setConfirming(true)}
+        >
           Reset Progress
         </button>
         {confirming ? (
-          <div className="confirm-overlay" onClick={() => setConfirming(false)}>
-            <div className="confirm-dialog" onClick={(e) => e.stopPropagation()}>
-              <p>Reset all progress? This cannot be undone.</p>
-              <div className="confirm-dialog__actions">
-                <button className="btn btn--danger" onClick={handleReset}>
+          <div
+            className="fixed inset-0 bg-[var(--overlay-bg)] backdrop-blur-[8px] flex items-center justify-center z-[100] animate-fade-in-fast overscroll-contain"
+            onClick={() => setConfirming(false)}
+          >
+            <div
+              className="bg-[var(--bg-primary)] border border-[var(--border-bright)] rounded-[var(--radius-lg)] px-6 pt-7 pb-[22px] max-w-[380px] text-center shadow-[var(--shadow-dialog)] animate-fade-in-up-dialog"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <p className="mb-[22px] text-[14px] leading-[1.6] text-[var(--text-secondary)]">
+                Reset all progress? This cannot be undone.
+              </p>
+              <div className="flex gap-2.5 justify-center">
+                <button
+                  className="px-4 py-2 rounded-[var(--radius-md)] text-[13px] font-semibold bg-[var(--red)] text-white hover:bg-[#DC2626] hover:shadow-[0_0_20px_rgba(239,68,68,0.3)] transition-[background-color,box-shadow] duration-200 ease-out"
+                  onClick={handleReset}
+                >
                   Yes, Reset
                 </button>
-                <button className="btn btn--secondary" onClick={() => setConfirming(false)}>
+                <button
+                  className="px-4 py-2 rounded-[var(--radius-md)] text-[13px] font-semibold bg-[var(--bg-surface)] text-[var(--text-secondary)] border border-[var(--border-bright)] hover:text-[var(--text)] hover:bg-[var(--bg-elevated)] transition-[background-color,color] duration-200 ease-out"
+                  onClick={() => setConfirming(false)}
+                >
                   Cancel
                 </button>
               </div>
@@ -136,6 +179,9 @@ function AllDoneScreen({ totalQuestions }: { totalQuestions: number }) {
 function AppInner() {
   const completed = useCompletionStore((s) => s.completed);
   const toggleComplete = useCompletionStore((s) => s.toggleComplete);
+  const recordAttempt = useCompletionStore((s) => s.recordAttempt);
+
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
 
   const question = useQuestionStore((s) => s.question);
   const totalQuestions = useQuestionStore((s) => s.totalQuestions);
@@ -157,7 +203,6 @@ function AppInner() {
   const [showSettings, setShowSettings] = useState(false);
   const [showQuestions, setShowQuestions] = useState(false);
   const [zenMode, setZenMode] = useState(false);
-  // Stores editor content in a ref to avoid re-renders on every keystroke
   const codeRef = useRef("");
 
   const scaffoldCode = question?.scaffolds[language] ?? "";
@@ -166,9 +211,6 @@ function AppInner() {
     codeRef.current = scaffoldCode;
   }, [scaffoldCode]);
 
-  // Forces CodeEditor to fully remount when question, language, theme, or editor settings change.
-  // CM6 doesn't support dynamic reconfiguration of themes, so a fresh instance is needed.
-  // Exclude display-only prefs (showHints, showKeywords, zenFullscreen) that don't affect the editor.
   const { showHints: _, showKeywords: _k, zenFullscreen: _z, ...editorCmSettings } = editorSettings;
   const editorKey = question
     ? `${question.id}-${language}-${themeMode}-${themePalette}-${JSON.stringify(editorCmSettings)}`
@@ -179,15 +221,17 @@ function AppInner() {
   }, []);
 
   const handleRun = useCallback(() => {
-    if (!codeRef.current) return;
+    if (!codeRef.current || !question) return;
+    recordAttempt(question.id);
     runCode(language, codeRef.current);
-  }, [language, runCode]);
+  }, [language, runCode, question, recordAttempt]);
 
   const handleSubmit = useCallback(async () => {
     if (!codeRef.current || !question) return;
+    recordAttempt(question.id);
     await saveSolution(question.id, language, codeRef.current);
     runCode(language, codeRef.current);
-  }, [language, runCode, question]);
+  }, [language, runCode, question, recordAttempt]);
 
   const handleRandom = useCallback(() => {
     clearResult();
@@ -238,8 +282,6 @@ function AppInner() {
       }
     };
 
-    // Sync: if user exits fullscreen via browser chrome (F11 / Esc),
-    // also exit zen mode
     const handleFullscreenChange = () => {
       if (!document.fullscreenElement && zenFullscreen) {
         setZenMode(false);
@@ -269,8 +311,8 @@ function AppInner() {
 
   if (zenMode) {
     return (
-      <div className="zen">
-        <div className="zen__editor">
+      <div className="group fixed inset-0 z-[9999] flex flex-col bg-[var(--cm-bg,var(--bg-deep))] animate-zen-fade-in">
+        <div className="flex-1 min-h-0 flex flex-col">
           <CodeEditor
             key={editorKey}
             language={language}
@@ -282,30 +324,33 @@ function AppInner() {
           />
         </div>
         <button
-          className="zen__exit"
+          className="fixed top-3 right-3 z-[10000] flex items-center gap-1.5 px-3 py-1.5 rounded-[var(--radius-md)] bg-[var(--bg-surface)] text-[var(--text-muted)] font-[family-name:var(--font-display)] text-[11px] font-semibold tracking-[0.03em] opacity-0 transition-[opacity,background-color,color] duration-200 ease-out pointer-events-none group-hover:opacity-100 group-hover:pointer-events-auto hover:bg-[var(--bg-elevated)] hover:text-[var(--text)] focus-visible:opacity-100 focus-visible:pointer-events-auto peer"
           onClick={exitZen}
           aria-label="Exit Zen Mode"
           title="Exit Zen Mode (Esc)"
         >
           <EyeOff size={16} />
-          <span className="zen__exit-label">Esc</span>
+          <span className="px-[5px] py-px rounded-[3px] bg-[var(--bg-elevated)] text-[10px] leading-none">Esc</span>
         </button>
       </div>
     );
   }
 
   return (
-    <div className="app">
-      <header className="topbar">
-        <div className="topbar__brand">
-          <h1>Sighted <span className="brand-accent">75</span></h1>
+    <div className="flex flex-col h-full bg-[var(--bg-deep)] transition-colors duration-300">
+      {/* Top bar */}
+      <header className="flex items-center justify-between px-5 h-[52px] bg-[var(--bg-primary)] border-b-2 border-b-[var(--accent)] shrink-0 transition-[background-color,border-color] duration-300">
+        <div>
+          <h1 className="font-[family-name:var(--font-display)] text-[15px] font-bold text-[var(--text)] tracking-[-0.01em]">
+            Sighted <span className="text-[var(--accent)]">75</span>
+          </h1>
         </div>
-        <div className="topbar__center">
+        <div className="flex-1 max-w-[320px] mx-6">
           <ProgressBar completed={completed.size} total={totalQuestions} />
         </div>
-        <div className="topbar__actions">
+        <div className="flex items-center gap-1.5">
           <button
-            className="topbar__settings-btn"
+            className="flex items-center justify-center w-[34px] h-[34px] rounded-[var(--radius-md)] text-[var(--text-muted)] transition-[color,background-color] duration-200 ease-out cursor-pointer hover:text-[var(--text)] hover:bg-[var(--bg-surface)] [&:hover_svg]:rotate-45 [&_svg]:transition-transform [&_svg]:duration-300 [&_svg]:ease-out"
             onClick={openQuestions}
             aria-label="All Questions"
             title="All Questions"
@@ -313,7 +358,7 @@ function AppInner() {
             {listIcon}
           </button>
           <button
-            className="topbar__settings-btn"
+            className="flex items-center justify-center w-[34px] h-[34px] rounded-[var(--radius-md)] text-[var(--text-muted)] transition-[color,background-color] duration-200 ease-out cursor-pointer hover:text-[var(--text)] hover:bg-[var(--bg-surface)] [&:hover_svg]:rotate-45 [&_svg]:transition-transform [&_svg]:duration-300 [&_svg]:ease-out"
             onClick={toggleZen}
             aria-label="Zen Mode"
             title="Zen Mode"
@@ -321,22 +366,38 @@ function AppInner() {
             <Eye size={18} />
           </button>
           <button
-            className="topbar__settings-btn"
+            className="flex items-center justify-center w-[34px] h-[34px] rounded-[var(--radius-md)] text-[var(--text-muted)] transition-[color,background-color] duration-200 ease-out cursor-pointer hover:text-[var(--text)] hover:bg-[var(--bg-surface)] [&:hover_svg]:rotate-45 [&_svg]:transition-transform [&_svg]:duration-300 [&_svg]:ease-out"
             onClick={openSettings}
             aria-label="Settings"
             title="Settings"
           >
             {gearIcon}
           </button>
-          <button className="btn btn--secondary" onClick={handleRandom}>
-            <Shuffle size={14} style={{ marginRight: 6, verticalAlign: "middle" }} />
+          <button
+            className="inline-flex items-center gap-1.5 px-4 py-2 rounded-[var(--radius-md)] text-[13px] font-semibold bg-[var(--bg-surface)] text-[var(--text-secondary)] border border-[var(--border-bright)] transition-[background-color,color] duration-200 ease-out hover:text-[var(--text)] hover:bg-[var(--bg-elevated)]"
+            onClick={handleRandom}
+          >
+            <Shuffle size={14} />
             Random
           </button>
+          {isAuthenticated ? (
+            <UserButton size="sm" />
+          ) : (
+            <a
+              href="/auth/sign-in"
+              className="inline-flex items-center gap-1.5 px-3 py-2 rounded-[var(--radius-md)] text-[12px] font-medium text-[var(--text-muted)] transition-[color,background-color] duration-200 ease-out hover:text-[var(--text-secondary)] hover:bg-[var(--bg-surface)]"
+              title="Sign in to sync progress"
+            >
+              <LogIn size={14} />
+              Sign in
+            </a>
+          )}
         </div>
       </header>
 
-      <main className="split-layout">
-        <div className="split-layout__left">
+      {/* Split layout */}
+      <main className="flex flex-1 min-h-0">
+        <div className="w-[44%] min-w-[360px] overflow-y-auto border-r border-[var(--border)] bg-[var(--bg-primary)] animate-fade-in transition-colors duration-300">
           <QuestionCard
             question={question}
             isCompleted={completed.has(question.id)}
@@ -344,20 +405,20 @@ function AppInner() {
           />
         </div>
 
-        <div className="split-layout__right">
-          <div className="editor-section">
-            <div className="editor-section__header">
+        <div className="flex-1 flex flex-col min-w-0 bg-[var(--bg-deep)] animate-[fadeIn_0.3s_ease-out_0.05s_both] transition-colors duration-300">
+          <div className="flex-1 flex flex-col min-h-0">
+            <div className="flex items-center justify-between px-3.5 py-2 bg-[var(--bg-primary)] border-b border-[var(--border)] transition-colors duration-300">
               <LanguageSelector language={language} onChange={handleLanguageChange} />
-              <div className="editor-section__actions">
+              <div className="flex gap-2">
                 <button
-                  className="btn btn--secondary"
+                  className="px-4 py-2 rounded-[var(--radius-md)] text-[13px] font-semibold bg-[var(--bg-surface)] text-[var(--text-secondary)] border border-[var(--border-bright)] transition-[background-color,color] duration-200 ease-out hover:text-[var(--text)] hover:bg-[var(--bg-elevated)]"
                   onClick={handleRun}
                   disabled={running}
                 >
                   {running ? "Running\u2026" : "Run"}
                 </button>
                 <button
-                  className="btn btn--primary"
+                  className="px-4 py-2 rounded-[var(--radius-md)] text-[13px] font-semibold bg-[var(--accent)] text-[var(--accent-text-on)] transition-[background-color,box-shadow] duration-200 ease-out hover:bg-[var(--accent-hover)] hover:shadow-[0_0_20px_var(--accent-glow)]"
                   onClick={handleSubmit}
                   disabled={running}
                 >

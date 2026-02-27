@@ -1,3 +1,5 @@
+"use client";
+
 import type { RunResult } from "../store/codeRunnerStore";
 
 export function runGo(): RunResult {

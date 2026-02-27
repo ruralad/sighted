@@ -1,7 +1,10 @@
+"use client";
+
 import { create } from "zustand";
 import questions from "../data/questions.json";
 import type { Question } from "../types/question";
 import { getCurrentQuestion, setCurrentQuestion } from "./db";
+import { useCompletionStore } from "./completionStore";
 
 const allQuestions = questions as Question[];
 
@@ -68,10 +71,14 @@ export const useQuestionStore = create<QuestionStore>((setState) => ({
   },
 
   selectQuestion: (id: number) => {
+    const current = useQuestionStore.getState().question;
     const found = allQuestions.find((q) => q.id === id);
     if (found) {
       setState({ question: found });
       setCurrentQuestion(found.id);
+      if (current && found.id !== current.id) {
+        useCompletionStore.getState().recordRevisit(found.id);
+      }
     }
   },
 }));

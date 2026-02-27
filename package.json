@@ -3,9 +3,9 @@
   "version": "1.0.0",
   "type": "module",
   "scripts": {
-    "dev": "vite",
-    "build": "vite build",
-    "preview": "vite preview",
+    "dev": "next dev --turbopack",
+    "build": "next build",
+    "start": "next start",
     "lint": "oxlint src/"
   },
   "dependencies": {
@@ -17,20 +17,26 @@
     "@codemirror/state": "^6.5.2",
     "@codemirror/theme-one-dark": "^6.1.2",
     "@codemirror/view": "^6.36.5",
+    "@neondatabase/auth": "^0.2.0-beta.1",
+    "@neondatabase/serverless": "^1.0.2",
+    "@tailwindcss/postcss": "^4.2.1",
     "@uiw/codemirror-themes-all": "^4.25.5",
     "codemirror": "^6.0.1",
+    "drizzle-orm": "^0.45.1",
     "idb-keyval": "^6.2.1",
     "lucide-react": "^0.575.0",
+    "next": "^16.1.6",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
+    "tailwindcss": "^4.2.1",
     "zustand": "^5.0.11"
   },
   "devDependencies": {
-    "vite": "npm:rolldown-vite@latest",
-    "@vitejs/plugin-react-oxc": "^0.2.3",
+    "@types/node": "^25.3.1",
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
-    "typescript": "^5.7.0",
-    "oxlint": "latest"
+    "drizzle-kit": "^0.31.9",
+    "oxlint": "latest",
+    "typescript": "^5.7.0"
   }
 }

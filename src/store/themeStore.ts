@@ -1,5 +1,9 @@
+"use client";
+
 import { create } from "zustand";
 import { get, set } from "idb-keyval";
+import { saveSettings, getSettings } from "../../app/actions/progress";
+import { useAuthStore } from "./authStore";
 
 export type ThemeMode = "dark" | "light";
 export type ThemePalette = "emerald" | "ocean" | "amber";
@@ -11,7 +15,7 @@ export interface ThemeState {
 
 const THEME_KEY = "sighted75:theme";
 
-const DEFAULT_THEME: ThemeState = { mode: "light", palette: "amber" };
+const DEFAULT_THEME: ThemeState = { mode: "light", palette: "emerald" };
 
 export const PALETTE_META: Record<ThemePalette, { label: string; swatch: string }> = {
   emerald: { label: "Emerald", swatch: "#22C55E" },
@@ -19,7 +23,6 @@ export const PALETTE_META: Record<ThemePalette, { label: string; swatch: string 
   amber:   { label: "Amber",   swatch: "#F59E0B" },
 };
 
-// Sets data attributes on <html> that CSS [data-mode][data-palette] selectors match against
 function applyThemeToDOM(theme: ThemeState) {
   document.documentElement.setAttribute("data-mode", theme.mode);
   document.documentElement.setAttribute("data-palette", theme.palette);
@@ -32,6 +35,17 @@ function getSystemPreference(): ThemeMode {
   return "dark";
 }
 
+let settingsSyncTimer: ReturnType<typeof setTimeout> | null = null;
+
+function debouncedServerSync() {
+  if (settingsSyncTimer) clearTimeout(settingsSyncTimer);
+  settingsSyncTimer = setTimeout(() => {
+    if (!useAuthStore.getState().isAuthenticated) return;
+    const theme = useThemeStore.getState().theme;
+    saveSettings(theme, null).catch(() => {});
+  }, 2000);
+}
+
 interface ThemeStore {
   theme: ThemeState;
   loaded: boolean;
@@ -40,7 +54,6 @@ interface ThemeStore {
   setPalette: (palette: ThemePalette) => void;
 }
 
-// Module-level guard prevents double hydration in React StrictMode
 let didHydrate = false;
 
 export const useThemeStore = create<ThemeStore>((setState, getState) => ({
@@ -52,8 +65,19 @@ export const useThemeStore = create<ThemeStore>((setState, getState) => ({
     didHydrate = true;
 
     const stored = await get<ThemeState>(THEME_KEY);
-    // Fall back to OS preference on first visit (no stored theme yet)
-    const resolved = stored ?? { ...DEFAULT_THEME, mode: getSystemPreference() };
+    let resolved = stored ?? { ...DEFAULT_THEME, mode: getSystemPreference() };
+
+    if (useAuthStore.getState().isAuthenticated) {
+      const serverSettings = await getSettings().catch(() => null);
+      if (serverSettings?.theme) {
+        const serverTheme = serverSettings.theme as ThemeState;
+        if (serverTheme.mode && serverTheme.palette) {
+          resolved = serverTheme;
+          set(THEME_KEY, resolved);
+        }
+      }
+    }
+
     applyThemeToDOM(resolved);
     setState({ theme: resolved, loaded: true });
   },
@@ -64,6 +88,7 @@ export const useThemeStore = create<ThemeStore>((setState, getState) => ({
     applyThemeToDOM(next);
     setState({ theme: next });
     set(THEME_KEY, next);
+    debouncedServerSync();
   },
 
   setPalette: (palette: ThemePalette) => {
@@ -72,5 +97,6 @@ export const useThemeStore = create<ThemeStore>((setState, getState) => ({
     applyThemeToDOM(next);
     setState({ theme: next });
     set(THEME_KEY, next);
+    debouncedServerSync();
   },
 }));
