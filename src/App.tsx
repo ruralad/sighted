@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useCallback, useRef, useEffect } from "react";
-import { Eye, EyeOff, Shuffle, LogIn } from "lucide-react";
+import { Eye, EyeOff, Shuffle } from "lucide-react";
 import type { Language } from "./types/question";
 import { useThemeStore } from "./store/themeStore";
 import { useCompletionStore } from "./store/completionStore";
@@ -19,8 +19,7 @@ import { OutputPanel } from "./components/OutputPanel";
 import { SettingsModal } from "./components/SettingsModal";
 import { QuestionsModal } from "./components/QuestionsModal";
 import { WelcomeGate, getAuthChoice, setAuthChoice } from "./components/WelcomeGate";
-import { AuthForms } from "./components/AuthForms";
-import { signOut } from "../app/actions/auth";
+import { Timer } from "./components/Timer";
 
 const listIcon = (
   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -182,95 +181,13 @@ function AllDoneScreen({ totalQuestions }: { totalQuestions: number }) {
   );
 }
 
-function UserMenu() {
-  const user = useAuthStore((s) => s.user);
-  const [open, setOpen] = useState(false);
-  const [signingOut, setSigningOut] = useState(false);
-  const menuRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (!open) return;
-    const handleClick = (e: MouseEvent) => {
-      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
-        setOpen(false);
-      }
-    };
-    document.addEventListener("mousedown", handleClick);
-    return () => document.removeEventListener("mousedown", handleClick);
-  }, [open]);
-
-  const handleSignOut = useCallback(async () => {
-    setSigningOut(true);
-    await signOut().catch(() => {});
-    window.location.reload();
-  }, []);
-
-  const initial = user?.displayName?.charAt(0)?.toUpperCase() ?? user?.username?.charAt(0)?.toUpperCase() ?? "?";
-
-  return (
-    <div className="relative" ref={menuRef}>
-      <button
-        className="flex items-center justify-center w-[34px] h-[34px] rounded-full bg-[var(--accent)] text-[var(--accent-text-on)] text-[13px] font-bold cursor-pointer transition-[box-shadow] duration-200 ease-out hover:shadow-[0_0_0_3px_var(--accent-dim)]"
-        onClick={() => setOpen((p) => !p)}
-        aria-label="User menu"
-      >
-        {initial}
-      </button>
-      {open ? (
-        <div className="absolute right-0 top-[calc(100%+6px)] w-[200px] bg-[var(--bg-surface)] border border-[var(--border-bright)] rounded-[var(--radius-md)] shadow-[var(--shadow-dialog)] py-1.5 z-50 animate-fade-in-fast">
-          <div className="px-3 py-2 border-b border-[var(--border)]">
-            <p className="text-[13px] font-medium text-[var(--text)] truncate">{user?.displayName}</p>
-            <p className="text-[11px] text-[var(--text-muted)] truncate">@{user?.username}</p>
-          </div>
-          <button
-            className="w-full text-left px-3 py-2 text-[13px] text-[var(--text-muted)] hover:text-[var(--text)] hover:bg-[var(--bg-elevated)] transition-[color,background-color] duration-150"
-            onClick={handleSignOut}
-            disabled={signingOut}
-          >
-            {signingOut ? "Signing out\u2026" : "Sign Out"}
-          </button>
-        </div>
-      ) : null}
-    </div>
-  );
-}
-
-function SignInModal({ open, onClose }: { open: boolean; onClose: () => void }) {
-  useEffect(() => {
-    if (!open) return;
-    const handleKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
-    };
-    document.addEventListener("keydown", handleKey);
-    return () => document.removeEventListener("keydown", handleKey);
-  }, [open, onClose]);
-
-  if (!open) return null;
-
-  return (
-    <div
-      className="fixed inset-0 bg-[var(--overlay-bg)] backdrop-blur-[8px] flex items-center justify-center z-[200] animate-fade-in-fast overscroll-contain"
-      onClick={onClose}
-    >
-      <div
-        className="bg-[var(--bg-surface)] border border-[var(--border-bright)] rounded-[var(--radius-lg)] p-6 w-[400px] max-w-[calc(100vw-32px)] shadow-[var(--shadow-dialog)] animate-fade-in-up-dialog"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <h2 className="font-[family-name:var(--font-display)] text-[18px] font-bold text-[var(--text)] tracking-[-0.02em] text-center mb-5">
-          Sign in to Sighted <span className="text-[var(--accent)]">75</span>
-        </h2>
-        <AuthForms onSuccess={() => window.location.reload()} />
-      </div>
-    </div>
-  );
-}
-
 function AppInner() {
   const completed = useCompletionStore((s) => s.completed);
   const toggleComplete = useCompletionStore((s) => s.toggleComplete);
   const recordAttempt = useCompletionStore((s) => s.recordAttempt);
 
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
+  const authUser = useAuthStore((s) => s.user);
 
   const question = useQuestionStore((s) => s.question);
   const totalQuestions = useQuestionStore((s) => s.totalQuestions);
@@ -291,7 +208,6 @@ function AppInner() {
   const [language, setLanguage] = useState<Language>("javascript");
   const [showSettings, setShowSettings] = useState(false);
   const [showQuestions, setShowQuestions] = useState(false);
-  const [showSignIn, setShowSignIn] = useState(false);
   const [zenMode, setZenMode] = useState(false);
   const codeRef = useRef("");
 
@@ -342,6 +258,7 @@ function AppInner() {
   const openQuestions = useCallback(() => setShowQuestions(true), []);
   const closeQuestions = useCallback(() => setShowQuestions(false), []);
   const zenFullscreen = useEditorStore((s) => s.settings.zenFullscreen);
+  const zenTimer = useEditorStore((s) => s.settings.zenTimer);
 
   const toggleZen = useCallback(() => {
     setZenMode((prev) => {
@@ -413,15 +330,22 @@ function AppInner() {
             onRun={handleRun}
           />
         </div>
-        <button
-          className="fixed top-3 right-3 z-[10000] flex items-center gap-1.5 px-3 py-1.5 rounded-[var(--radius-md)] bg-[var(--bg-surface)] text-[var(--text-muted)] font-[family-name:var(--font-display)] text-[11px] font-semibold tracking-[0.03em] opacity-0 transition-[opacity,background-color,color] duration-200 ease-out pointer-events-none group-hover:opacity-100 group-hover:pointer-events-auto hover:bg-[var(--bg-elevated)] hover:text-[var(--text)] focus-visible:opacity-100 focus-visible:pointer-events-auto peer"
-          onClick={exitZen}
-          aria-label="Exit Zen Mode"
-          title="Exit Zen Mode (Esc)"
-        >
-          <EyeOff size={16} />
-          <span className="px-[5px] py-px rounded-[3px] bg-[var(--bg-elevated)] text-[10px] leading-none">Esc</span>
-        </button>
+        <div className="fixed top-3 right-3 z-[10000] flex flex-col items-end gap-2">
+          <button
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-[var(--radius-md)] bg-[var(--bg-surface)] text-[var(--text-muted)] font-[family-name:var(--font-display)] text-[11px] font-semibold tracking-[0.03em] opacity-0 transition-[opacity,background-color,color] duration-200 ease-out pointer-events-none group-hover:opacity-100 group-hover:pointer-events-auto hover:bg-[var(--bg-elevated)] hover:text-[var(--text)] focus-visible:opacity-100 focus-visible:pointer-events-auto"
+            onClick={exitZen}
+            aria-label="Exit Zen Mode"
+            title="Exit Zen Mode (Esc)"
+          >
+            <EyeOff size={16} />
+            <span className="px-[5px] py-px rounded-[3px] bg-[var(--bg-elevated)] text-[10px] leading-none">Esc</span>
+          </button>
+          {zenTimer ? (
+            <div className="px-2.5 py-1.5 rounded-[var(--radius-md)] bg-[var(--bg-surface)]">
+              <Timer questionId={question?.id ?? null} zen />
+            </div>
+          ) : null}
+        </div>
       </div>
     );
   }
@@ -464,24 +388,13 @@ function AppInner() {
             {gearIcon}
           </button>
           <button
-            className="inline-flex items-center gap-1.5 px-4 py-2 rounded-[var(--radius-md)] text-[13px] font-semibold bg-[var(--bg-surface)] text-[var(--text-secondary)] border border-[var(--border-bright)] transition-[background-color,color] duration-200 ease-out hover:text-[var(--text)] hover:bg-[var(--bg-elevated)]"
+            className="flex items-center justify-center w-[34px] h-[34px] rounded-[var(--radius-md)] text-[var(--text-muted)] transition-[color,background-color] duration-200 ease-out cursor-pointer hover:text-[var(--text)] hover:bg-[var(--bg-surface)]"
             onClick={handleRandom}
+            aria-label="Random Question"
+            title="Random Question"
           >
-            <Shuffle size={14} />
-            Random
+            <Shuffle size={18} />
           </button>
-          {isAuthenticated ? (
-            <UserMenu />
-          ) : (
-            <button
-              className="inline-flex items-center gap-1.5 px-3 py-2 rounded-[var(--radius-md)] text-[12px] font-medium text-[var(--text-muted)] transition-[color,background-color] duration-200 ease-out hover:text-[var(--text-secondary)] hover:bg-[var(--bg-surface)]"
-              title="Sign in to sync progress"
-              onClick={() => setShowSignIn(true)}
-            >
-              <LogIn size={14} />
-              Sign in
-            </button>
-          )}
         </div>
       </header>
 
@@ -499,6 +412,7 @@ function AppInner() {
           <div className="flex-1 flex flex-col min-h-0">
             <div className="flex items-center justify-between px-3.5 py-2 bg-[var(--bg-primary)] border-b border-[var(--border)] transition-colors duration-300">
               <LanguageSelector language={language} onChange={handleLanguageChange} />
+              <Timer questionId={question?.id ?? null} />
               <div className="flex gap-2">
                 <button
                   className="px-4 py-2 rounded-[var(--radius-md)] text-[13px] font-semibold bg-[var(--bg-surface)] text-[var(--text-secondary)] border border-[var(--border-bright)] transition-[background-color,color] duration-200 ease-out hover:text-[var(--text)] hover:bg-[var(--bg-elevated)]"
@@ -530,6 +444,16 @@ function AppInner() {
         </div>
       </main>
 
+      {/* Footer */}
+      <footer className="flex items-center justify-between px-5 h-[28px] bg-[var(--bg-primary)] border-t border-[var(--border)] shrink-0 transition-[background-color,border-color] duration-300">
+        <span className="text-[11px] text-[var(--text-muted)] tabular-nums">v1.0.0</span>
+        <span className="text-[11px] text-[var(--text-muted)] truncate">
+          {isAuthenticated && authUser
+            ? <>Signed in as <span className="text-[var(--text-secondary)] font-medium">@{authUser.username}</span></>
+            : "Guest"}
+        </span>
+      </footer>
+
       <SettingsModal open={showSettings} onClose={closeSettings} />
       <QuestionsModal
         open={showQuestions}
@@ -538,7 +462,6 @@ function AppInner() {
         currentQuestionId={question?.id ?? null}
         onSelectQuestion={handleSelectQuestion}
       />
-      <SignInModal open={showSignIn} onClose={() => setShowSignIn(false)} />
     </div>
   );
 }

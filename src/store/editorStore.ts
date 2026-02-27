@@ -63,6 +63,7 @@ export interface EditorSettings {
   editorTheme: EditorThemeId;
   adaptAppTheme: boolean;
   zenFullscreen: boolean;
+  zenTimer: boolean;
   showHints: boolean;
   showKeywords: boolean;
 }
@@ -87,6 +88,7 @@ export const DEFAULT_EDITOR: EditorSettings = {
   editorTheme: "auto",
   adaptAppTheme: false,
   zenFullscreen: false,
+  zenTimer: true,
   showHints: true,
   showKeywords: true,
 };

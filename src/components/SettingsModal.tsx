@@ -120,6 +120,7 @@ function AppearanceTab() {
   const adaptAppTheme = useEditorStore((s) => s.settings.adaptAppTheme);
   const editorTheme = useEditorStore((s) => s.settings.editorTheme);
   const zenFullscreen = useEditorStore((s) => s.settings.zenFullscreen);
+  const zenTimer = useEditorStore((s) => s.settings.zenTimer);
   const showHints = useEditorStore((s) => s.settings.showHints);
   const showKeywords = useEditorStore((s) => s.settings.showKeywords);
   const updateEditor = useEditorStore((s) => s.update);
@@ -202,6 +203,13 @@ function AppearanceTab() {
           <SettingsRowInfo name="Fullscreen" desc="Enter true fullscreen when activating Zen Mode" />
           <label className="settings-toggle">
             <input type="checkbox" checked={zenFullscreen} onChange={(e) => updateEditor("zenFullscreen", e.target.checked)} />
+            <span className="settings-toggle__track" />
+          </label>
+        </SettingsRow>
+        <SettingsRow>
+          <SettingsRowInfo name="Timer" desc="Show the stopwatch/countdown timer in Zen Mode" />
+          <label className="settings-toggle">
+            <input type="checkbox" checked={zenTimer} onChange={(e) => updateEditor("zenTimer", e.target.checked)} />
             <span className="settings-toggle__track" />
           </label>
         </SettingsRow>
