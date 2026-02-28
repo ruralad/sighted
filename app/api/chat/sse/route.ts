@@ -5,6 +5,9 @@ import {
   chatRoomMembers,
   chatRooms,
   userPublicKeys,
+  groupInvitations,
+  groupSessions,
+  groupMembers,
 } from "@/lib/db/schema";
 import { eq, and, sql } from "drizzle-orm";
 
@@ -26,6 +29,8 @@ export async function GET(req: Request) {
       let lastMessageId = 0;
       let lastRoomCount = -1;
       let lastKeyFingerprint = "";
+      let lastInvitationCount = -1;
+      let lastSessionFingerprint = "";
       let aborted = false;
 
       controller.enqueue(
@@ -132,6 +137,61 @@ export async function GET(req: Request) {
               }
             }
           }
+          // ── Group invitations polling ──
+          const pendingInvites = await db
+            .select({ id: groupInvitations.id })
+            .from(groupInvitations)
+            .where(
+              and(
+                eq(groupInvitations.inviteeId, userId),
+                eq(groupInvitations.status, "pending"),
+              ),
+            );
+
+          const inviteCount = pendingInvites.length;
+          if (lastInvitationCount !== -1 && inviteCount !== lastInvitationCount) {
+            controller.enqueue(
+              encoder.encode(
+                `data: ${JSON.stringify({
+                  type: "group_invitation",
+                  count: inviteCount,
+                })}\n\n`,
+              ),
+            );
+          }
+          lastInvitationCount = inviteCount;
+
+          // ── Group sessions polling ──
+          const myGroupIds = await db
+            .select({ groupId: groupMembers.groupId })
+            .from(groupMembers)
+            .where(eq(groupMembers.userId, userId));
+
+          const gIds = myGroupIds.map((g) => g.groupId);
+          if (gIds.length > 0) {
+            const activeSessions = await db
+              .select({
+                id: groupSessions.id,
+                groupId: groupSessions.groupId,
+                status: groupSessions.status,
+              })
+              .from(groupSessions)
+              .where(sql`${groupSessions.groupId} IN ${gIds}`);
+
+            const sessionFp = activeSessions
+              .map((s) => `${s.id}:${s.status}`)
+              .sort()
+              .join("|");
+
+            if (lastSessionFingerprint && sessionFp !== lastSessionFingerprint) {
+              controller.enqueue(
+                encoder.encode(
+                  `data: ${JSON.stringify({ type: "group_session_changed" })}\n\n`,
+                ),
+              );
+            }
+            lastSessionFingerprint = sessionFp;
+          }
         } catch {
           /* db error — retry next poll */
         }
@@ -170,6 +230,38 @@ export async function GET(req: Request) {
 
             lastKeyFingerprint = allMembers
               .map((m) => `${m.memberId}:${m.keyId ?? ""}`)
+              .sort()
+              .join("|");
+          }
+          // Init group counters
+          const initInvites = await db
+            .select({ id: groupInvitations.id })
+            .from(groupInvitations)
+            .where(
+              and(
+                eq(groupInvitations.inviteeId, userId),
+                eq(groupInvitations.status, "pending"),
+              ),
+            );
+          lastInvitationCount = initInvites.length;
+
+          const initGroups = await db
+            .select({ groupId: groupMembers.groupId })
+            .from(groupMembers)
+            .where(eq(groupMembers.userId, userId));
+
+          const initGIds = initGroups.map((g) => g.groupId);
+          if (initGIds.length > 0) {
+            const initSessions = await db
+              .select({
+                id: groupSessions.id,
+                status: groupSessions.status,
+              })
+              .from(groupSessions)
+              .where(sql`${groupSessions.groupId} IN ${initGIds}`);
+
+            lastSessionFingerprint = initSessions
+              .map((s) => `${s.id}:${s.status}`)
               .sort()
               .join("|");
           }

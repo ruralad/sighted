@@ -107,3 +107,85 @@ export const chatMessages = pgTable("chat_messages", {
   contentType: text("content_type").notNull().default("rich"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
+
+// ── Group tables ─────────────────────────────────────────────
+
+export const groups = pgTable("groups", {
+  id: text("id").primaryKey(),
+  name: text("name").notNull(),
+  createdBy: text("created_by")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
+  chatRoomId: text("chat_room_id").references(() => chatRooms.id, {
+    onDelete: "set null",
+  }),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});
+
+export const groupMembers = pgTable(
+  "group_members",
+  {
+    groupId: text("group_id")
+      .notNull()
+      .references(() => groups.id, { onDelete: "cascade" }),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    role: text("role").notNull().default("member"), // "admin" | "member"
+    joinedAt: timestamp("joined_at").notNull().defaultNow(),
+  },
+  (t) => [primaryKey({ columns: [t.groupId, t.userId] })],
+);
+
+export const groupInvitations = pgTable(
+  "group_invitations",
+  {
+    id: serial("id").primaryKey(),
+    groupId: text("group_id")
+      .notNull()
+      .references(() => groups.id, { onDelete: "cascade" }),
+    inviterId: text("inviter_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    inviteeId: text("invitee_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    status: text("status").notNull().default("pending"), // "pending" | "accepted" | "declined"
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+  },
+  (t) => [
+    uniqueIndex("group_invitee_pending_idx").on(t.groupId, t.inviteeId),
+  ],
+);
+
+export const groupSessions = pgTable("group_sessions", {
+  id: text("id").primaryKey(),
+  groupId: text("group_id")
+    .notNull()
+    .references(() => groups.id, { onDelete: "cascade" }),
+  questionId: integer("question_id").notNull(),
+  durationSecs: integer("duration_secs").notNull(),
+  startedBy: text("started_by")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
+  startedAt: timestamp("started_at").notNull().defaultNow(),
+  status: text("status").notNull().default("active"), // "active" | "completed"
+});
+
+export const groupSessionResults = pgTable(
+  "group_session_results",
+  {
+    sessionId: text("session_id")
+      .notNull()
+      .references(() => groupSessions.id, { onDelete: "cascade" }),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    completed: boolean("completed").notNull().default(false),
+    timeSpentSecs: integer("time_spent_secs").notNull().default(0),
+    submittedAt: timestamp("submitted_at"),
+    code: text("code"),
+  },
+  (t) => [primaryKey({ columns: [t.sessionId, t.userId] })],
+);

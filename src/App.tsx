@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useCallback, useRef, useEffect } from "react";
-import { Eye, EyeOff, Shuffle, MessageCircle } from "lucide-react";
+import { Eye, EyeOff, Shuffle, MessageCircle, Users } from "lucide-react";
 import type { Language } from "./types/question";
 import { useThemeStore } from "./store/themeStore";
 import { useCompletionStore } from "./store/completionStore";
@@ -21,7 +21,14 @@ import { QuestionsModal } from "./components/QuestionsModal";
 import { WelcomeGate, getAuthChoice, setAuthChoice } from "./components/WelcomeGate";
 import { Timer } from "./components/Timer";
 import { ChatModal } from "./components/ChatModal";
+import { GroupsModal } from "./components/GroupsModal";
+import { GroupSessionBanner } from "./components/GroupSession";
 import { useChatStore } from "./store/chatStore";
+import { useGroupStore } from "./store/groupStore";
+import questionsData from "./data/questions.json";
+import type { Question } from "./types/question";
+
+const allQuestions = questionsData as Question[];
 
 const listIcon = (
   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -210,21 +217,53 @@ function AppInner() {
   const setChatOpen = useChatStore((s) => s.setOpen);
   const openChat = useCallback(() => setChatOpen(true), [setChatOpen]);
 
+  const setGroupsOpen = useGroupStore((s) => s.setOpen);
+  const groupInvitationCount = useGroupStore((s) => s.invitations.length);
+  const openGroups = useCallback(() => setGroupsOpen(true), [setGroupsOpen]);
+
+  const liveSession = useGroupStore((s) => s.liveSession);
+  const submitResult = useGroupStore((s) => s.submitResult);
+
+  const sessionQuestion = liveSession
+    ? allQuestions.find((q) => q.id === liveSession.session.questionId) ?? null
+    : null;
+
+  const displayQuestion = liveSession ? sessionQuestion : question;
+
   const [language, setLanguage] = useState<Language>("javascript");
   const [showSettings, setShowSettings] = useState(false);
   const [showQuestions, setShowQuestions] = useState(false);
   const [zenMode, setZenMode] = useState(false);
   const codeRef = useRef("");
 
-  const scaffoldCode = question?.scaffolds[language] ?? "";
+  const [sessionSubmitted, setSessionSubmitted] = useState(false);
+  const [sessionSubmitting, setSessionSubmitting] = useState(false);
+
+  useEffect(() => {
+    setSessionSubmitted(false);
+    setSessionSubmitting(false);
+  }, [liveSession?.session.id]);
+
+  const handleSessionSubmit = useCallback(async () => {
+    if (!liveSession || sessionSubmitted) return;
+    const timeSpent = Math.floor((Date.now() - liveSession.joinedAt) / 1000);
+    setSessionSubmitting(true);
+    try {
+      await submitResult(liveSession.session.id, true, timeSpent, codeRef.current);
+      setSessionSubmitted(true);
+    } catch { /* error in store */ }
+    setSessionSubmitting(false);
+  }, [liveSession, sessionSubmitted, submitResult]);
+
+  const scaffoldCode = displayQuestion?.scaffolds[language] ?? "";
 
   useEffect(() => {
     codeRef.current = scaffoldCode;
   }, [scaffoldCode]);
 
   const { showHints: _, showKeywords: _k, zenFullscreen: _z, ...editorCmSettings } = editorSettings;
-  const editorKey = question
-    ? `${question.id}-${language}-${themeMode}-${themePalette}-${JSON.stringify(editorCmSettings)}`
+  const editorKey = displayQuestion
+    ? `${displayQuestion.id}-${language}-${themeMode}-${themePalette}-${liveSession ? "gs" : "n"}-${JSON.stringify(editorCmSettings)}`
     : "empty";
 
   const handleCodeChange = useCallback((code: string) => {
@@ -232,17 +271,21 @@ function AppInner() {
   }, []);
 
   const handleRun = useCallback(() => {
-    if (!codeRef.current || !question) return;
-    recordAttempt(question.id);
+    if (!codeRef.current || !displayQuestion) return;
+    if (!liveSession) recordAttempt(displayQuestion.id);
     runCode(language, codeRef.current);
-  }, [language, runCode, question, recordAttempt]);
+  }, [language, runCode, displayQuestion, recordAttempt, liveSession]);
 
   const handleSubmit = useCallback(async () => {
-    if (!codeRef.current || !question) return;
-    recordAttempt(question.id);
-    await saveSolution(question.id, language, codeRef.current);
+    if (!codeRef.current || !displayQuestion) return;
+    if (liveSession) {
+      handleSessionSubmit();
+      return;
+    }
+    recordAttempt(displayQuestion.id);
+    await saveSolution(displayQuestion.id, language, codeRef.current);
     runCode(language, codeRef.current);
-  }, [language, runCode, question, recordAttempt]);
+  }, [language, runCode, displayQuestion, recordAttempt, liveSession, handleSessionSubmit]);
 
   const handleRandom = useCallback(() => {
     clearResult();
@@ -317,7 +360,7 @@ function AppInner() {
     [selectQuestion, clearResult],
   );
 
-  if (!question) {
+  if (!displayQuestion) {
     return <AllDoneScreen totalQuestions={totalQuestions} />;
   }
 
@@ -347,7 +390,7 @@ function AppInner() {
           </button>
           {zenTimer ? (
             <div className="px-2.5 py-1.5 rounded-[var(--radius-md)] bg-[var(--bg-surface)]">
-              <Timer questionId={question?.id ?? null} zen />
+              <Timer questionId={displayQuestion?.id ?? null} zen />
             </div>
           ) : null}
         </div>
@@ -368,22 +411,41 @@ function AppInner() {
           <ProgressBar completed={completed.size} total={totalQuestions} />
         </div>
         <div className="flex items-center gap-1.5">
-          <button
-            className="flex items-center justify-center w-[34px] h-[34px] rounded-[var(--radius-md)] text-[var(--text-muted)] transition-[color,background-color] duration-200 ease-out cursor-pointer hover:text-[var(--text)] hover:bg-[var(--bg-surface)] [&:hover_svg]:rotate-45 [&_svg]:transition-transform [&_svg]:duration-300 [&_svg]:ease-out"
-            onClick={openQuestions}
-            aria-label="All Questions"
-            title="All Questions"
-          >
-            {listIcon}
-          </button>
-          <button
-            className="flex items-center justify-center w-[34px] h-[34px] rounded-[var(--radius-md)] text-[var(--text-muted)] transition-[color,background-color] duration-200 ease-out cursor-pointer hover:text-[var(--text)] hover:bg-[var(--bg-surface)] [&:hover_svg]:rotate-45 [&_svg]:transition-transform [&_svg]:duration-300 [&_svg]:ease-out"
-            onClick={toggleZen}
-            aria-label="Zen Mode"
-            title="Zen Mode"
-          >
-            <Eye size={18} />
-          </button>
+          {!liveSession ? (
+            <button
+              className="flex items-center justify-center w-[34px] h-[34px] rounded-[var(--radius-md)] text-[var(--text-muted)] transition-[color,background-color] duration-200 ease-out cursor-pointer hover:text-[var(--text)] hover:bg-[var(--bg-surface)] [&:hover_svg]:rotate-45 [&_svg]:transition-transform [&_svg]:duration-300 [&_svg]:ease-out"
+              onClick={openQuestions}
+              aria-label="All Questions"
+              title="All Questions"
+            >
+              {listIcon}
+            </button>
+          ) : null}
+          {!liveSession ? (
+            <button
+              className="flex items-center justify-center w-[34px] h-[34px] rounded-[var(--radius-md)] text-[var(--text-muted)] transition-[color,background-color] duration-200 ease-out cursor-pointer hover:text-[var(--text)] hover:bg-[var(--bg-surface)] [&:hover_svg]:rotate-45 [&_svg]:transition-transform [&_svg]:duration-300 [&_svg]:ease-out"
+              onClick={toggleZen}
+              aria-label="Zen Mode"
+              title="Zen Mode"
+            >
+              <Eye size={18} />
+            </button>
+          ) : null}
+          {isAuthenticated ? (
+            <button
+              className="relative flex items-center justify-center w-[34px] h-[34px] rounded-[var(--radius-md)] text-[var(--text-muted)] transition-[color,background-color] duration-200 ease-out cursor-pointer hover:text-[var(--text)] hover:bg-[var(--bg-surface)]"
+              onClick={openGroups}
+              aria-label="Groups"
+              title="Groups"
+            >
+              <Users size={18} />
+              {groupInvitationCount > 0 ? (
+                <span className="absolute -top-0.5 -right-0.5 flex items-center justify-center min-w-[16px] h-[16px] rounded-full bg-[var(--accent)] text-[var(--accent-text-on)] text-[9px] font-bold px-1 leading-none">
+                  {groupInvitationCount}
+                </span>
+              ) : null}
+            </button>
+          ) : null}
           {isAuthenticated ? (
             <button
               className="flex items-center justify-center w-[34px] h-[34px] rounded-[var(--radius-md)] text-[var(--text-muted)] transition-[color,background-color] duration-200 ease-out cursor-pointer hover:text-[var(--text)] hover:bg-[var(--bg-surface)]"
@@ -402,24 +464,36 @@ function AppInner() {
           >
             {gearIcon}
           </button>
-          <button
-            className="flex items-center justify-center w-[34px] h-[34px] rounded-[var(--radius-md)] text-[var(--text-muted)] transition-[color,background-color] duration-200 ease-out cursor-pointer hover:text-[var(--text)] hover:bg-[var(--bg-surface)]"
-            onClick={handleRandom}
-            aria-label="Random Question"
-            title="Random Question"
-          >
-            <Shuffle size={18} />
-          </button>
+          {!liveSession ? (
+            <button
+              className="flex items-center justify-center w-[34px] h-[34px] rounded-[var(--radius-md)] text-[var(--text-muted)] transition-[color,background-color] duration-200 ease-out cursor-pointer hover:text-[var(--text)] hover:bg-[var(--bg-surface)]"
+              onClick={handleRandom}
+              aria-label="Random Question"
+              title="Random Question"
+            >
+              <Shuffle size={18} />
+            </button>
+          ) : null}
         </div>
       </header>
+
+      {/* Group session banner */}
+      {liveSession ? (
+        <GroupSessionBanner
+          liveSession={liveSession}
+          submitted={sessionSubmitted}
+          onSubmit={handleSessionSubmit}
+          submitting={sessionSubmitting}
+        />
+      ) : null}
 
       {/* Split layout */}
       <main className="flex flex-1 min-h-0">
         <div className="w-[44%] min-w-[360px] overflow-y-auto border-r border-[var(--border)] bg-[var(--bg-primary)] animate-fade-in transition-colors duration-300">
           <QuestionCard
-            question={question}
-            isCompleted={completed.has(question.id)}
-            onToggleComplete={() => toggleComplete(question.id)}
+            question={displayQuestion}
+            isCompleted={completed.has(displayQuestion.id)}
+            onToggleComplete={liveSession ? undefined : () => toggleComplete(displayQuestion.id)}
           />
         </div>
 
@@ -427,7 +501,7 @@ function AppInner() {
           <div className="flex-1 flex flex-col min-h-0">
             <div className="flex items-center justify-between px-3.5 py-2 bg-[var(--bg-primary)] border-b border-[var(--border)] transition-colors duration-300">
               <LanguageSelector language={language} onChange={handleLanguageChange} />
-              <Timer questionId={question?.id ?? null} />
+              {!liveSession ? <Timer questionId={displayQuestion?.id ?? null} /> : <div />}
               <div className="flex gap-2">
                 <button
                   className="px-4 py-2 rounded-[var(--radius-md)] text-[13px] font-semibold bg-[var(--bg-surface)] text-[var(--text-secondary)] border border-[var(--border-bright)] transition-[background-color,color] duration-200 ease-out hover:text-[var(--text)] hover:bg-[var(--bg-elevated)]"
@@ -437,11 +511,21 @@ function AppInner() {
                   {running ? "Running\u2026" : "Run"}
                 </button>
                 <button
-                  className="px-4 py-2 rounded-[var(--radius-md)] text-[13px] font-semibold bg-[var(--accent)] text-[var(--accent-text-on)] transition-[background-color,box-shadow] duration-200 ease-out hover:bg-[var(--accent-hover)] hover:shadow-[0_0_20px_var(--accent-glow)]"
+                  className={`px-4 py-2 rounded-[var(--radius-md)] text-[13px] font-semibold transition-[background-color,box-shadow] duration-200 ease-out ${
+                    liveSession && sessionSubmitted
+                      ? "bg-green-500/15 text-green-400 cursor-default"
+                      : "bg-[var(--accent)] text-[var(--accent-text-on)] hover:bg-[var(--accent-hover)] hover:shadow-[0_0_20px_var(--accent-glow)]"
+                  }`}
                   onClick={handleSubmit}
-                  disabled={running}
+                  disabled={running || (liveSession ? sessionSubmitted || sessionSubmitting : false)}
                 >
-                  Submit
+                  {liveSession
+                    ? sessionSubmitting
+                      ? "Submitting\u2026"
+                      : sessionSubmitted
+                        ? "Submitted"
+                        : "Submit"
+                    : "Submit"}
                 </button>
               </div>
             </div>
@@ -478,6 +562,7 @@ function AppInner() {
         onSelectQuestion={handleSelectQuestion}
       />
       {isAuthenticated ? <ChatModal /> : null}
+      {isAuthenticated ? <GroupsModal /> : null}
     </div>
   );
 }

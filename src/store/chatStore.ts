@@ -16,6 +16,7 @@ import {
   decrypt,
 } from "@/lib/crypto/e2e";
 import { useAuthStore } from "./authStore";
+import { useGroupStore } from "./groupStore";
 
 export interface DecryptedMessage {
   id: number;
@@ -168,6 +169,7 @@ export const useChatStore = create<ChatStore>((setState, getState) => ({
 
     const cryptoStore = useChatCryptoStore.getState();
     const tempId = -Date.now();
+    const isPlaintextRoom = isUnencryptedGroupRoom(room);
 
     setState((s) => {
       const msgs = new Map(s.messages);
@@ -188,13 +190,23 @@ export const useChatStore = create<ChatStore>((setState, getState) => ({
     });
 
     try {
-      const key = await getEncryptionKey(room, cryptoStore);
-      const payload = await encrypt(key, plaintext);
+      let ciphertext: string;
+      let iv: string;
+
+      if (isPlaintextRoom) {
+        ciphertext = plaintext;
+        iv = "none";
+      } else {
+        const key = await getEncryptionKey(room, cryptoStore);
+        const payload = await encrypt(key, plaintext);
+        ciphertext = payload.ciphertext;
+        iv = payload.iv;
+      }
 
       const result = await sendMessageAction(
         roomId,
-        payload.ciphertext,
-        payload.iv,
+        ciphertext,
+        iv,
         cryptoStore.keyId,
         "rich",
       );
@@ -270,6 +282,21 @@ export const useChatStore = create<ChatStore>((setState, getState) => ({
           return;
         }
 
+        if (data.type === "group_invitation") {
+          useGroupStore.getState().refreshInvitations();
+          return;
+        }
+
+        if (data.type === "group_session_changed") {
+          const groupStore = useGroupStore.getState();
+          groupStore.refreshGroups();
+          if (groupStore.activeGroupId) {
+            groupStore.refreshActiveSession(groupStore.activeGroupId);
+            groupStore.loadGroupDetail(groupStore.activeGroupId);
+          }
+          return;
+        }
+
         if (data.type === "message") {
           const msg = data.payload as {
             id: number;
@@ -290,9 +317,15 @@ export const useChatStore = create<ChatStore>((setState, getState) => ({
           if (existing.some((m) => m.id === msg.id)) return;
 
           try {
-            const cryptoStore = useChatCryptoStore.getState();
-            const key = await getEncryptionKey(room, cryptoStore);
-            const content = await decrypt(key, msg.ciphertext, msg.iv);
+            let content: string;
+
+            if (isUnencryptedGroupRoom(room)) {
+              content = msg.ciphertext;
+            } else {
+              const cryptoStore = useChatCryptoStore.getState();
+              const key = await getEncryptionKey(room, cryptoStore);
+              content = await decrypt(key, msg.ciphertext, msg.iv);
+            }
 
             setState((s) => {
               const msgs = new Map(s.messages);
@@ -358,6 +391,10 @@ export const useChatStore = create<ChatStore>((setState, getState) => ({
 
 // ── Helpers ──────────────────────────────────────────────────
 
+function isUnencryptedGroupRoom(room: RoomInfo): boolean {
+  return room.type === "group" && !room.encryptedRoomKey;
+}
+
 function getCurrentUserId(): string {
   const authUser = useAuthStore.getState().user;
   if (!authUser) throw new Error("Not authenticated");
@@ -399,6 +436,19 @@ async function decryptMessages(
   encrypted: Awaited<ReturnType<typeof getMessages>>,
   room: RoomInfo,
 ): Promise<DecryptedMessage[]> {
+  const plaintext = isUnencryptedGroupRoom(room);
+
+  if (plaintext) {
+    return encrypted.map((msg) => ({
+      id: msg.id,
+      roomId: room.id,
+      senderId: msg.senderId,
+      content: msg.ciphertext,
+      contentType: msg.contentType,
+      createdAt: msg.createdAt,
+    }));
+  }
+
   const cryptoStore = useChatCryptoStore.getState();
   const key = await getEncryptionKey(room, cryptoStore);
 

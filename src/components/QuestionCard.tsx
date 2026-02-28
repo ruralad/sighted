@@ -26,7 +26,7 @@ function renderInlineCode(text: string): ReactNode[] {
 interface QuestionCardProps {
   question: Question;
   isCompleted: boolean;
-  onToggleComplete: () => void;
+  onToggleComplete?: () => void;
 }
 
 export function QuestionCard({
@@ -53,21 +53,23 @@ export function QuestionCard({
           <h2 className="font-[family-name:var(--font-display)] text-[22px] font-bold tracking-[-0.02em] leading-[1.3] text-[var(--text)] text-balance">
             {question.id}. {question.title}
           </h2>
-          <button
-            className={`px-3.5 py-1.5 rounded-[var(--radius-md)] text-[12px] font-semibold border whitespace-nowrap cursor-pointer transition-[background-color,color,border-color,box-shadow] duration-200 ease-out ${
-              isCompleted
-                ? "bg-[var(--green-dim)] text-[var(--green)] border-[rgba(34,197,94,0.4)] animate-pulse-glow"
-                : "bg-[var(--bg-surface)] text-[var(--text-muted)] border-[var(--border-bright)] hover:border-[var(--green)] hover:text-[var(--green)] hover:bg-[var(--green-dim)]"
-            }`}
-            onClick={onToggleComplete}
-          >
-            {isCompleted ? (
-              <>
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: 4, verticalAlign: "middle" }}><polyline points="20 6 9 17 4 12" /></svg>
-                Completed
-              </>
-            ) : "Mark Complete"}
-          </button>
+          {onToggleComplete ? (
+            <button
+              className={`px-3.5 py-1.5 rounded-[var(--radius-md)] text-[12px] font-semibold border whitespace-nowrap cursor-pointer transition-[background-color,color,border-color,box-shadow] duration-200 ease-out ${
+                isCompleted
+                  ? "bg-[var(--green-dim)] text-[var(--green)] border-[rgba(34,197,94,0.4)] animate-pulse-glow"
+                  : "bg-[var(--bg-surface)] text-[var(--text-muted)] border-[var(--border-bright)] hover:border-[var(--green)] hover:text-[var(--green)] hover:bg-[var(--green-dim)]"
+              }`}
+              onClick={onToggleComplete}
+            >
+              {isCompleted ? (
+                <>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: 4, verticalAlign: "middle" }}><polyline points="20 6 9 17 4 12" /></svg>
+                  Completed
+                </>
+              ) : "Mark Complete"}
+            </button>
+          ) : null}
         </div>
         {showKeywords && (
           <div className="flex gap-2 flex-wrap items-center">
