@@ -2,7 +2,7 @@
 
 ## Project Overview
 
-Sighted 75 is a single-page React app for practicing LeetCode-style coding questions (the "Blind 75" set). It features an in-browser code editor (CodeMirror 6) with 31 selectable syntax themes, JavaScript/Python execution, Go/Java/Rust/C/C++ scaffold-only support, completion tracking via IndexedDB, a multi-palette dark/light theme system with optional editor-theme-driven app theming, and a distraction-free Zen Mode.
+Sighted 75 is a single-page React app for practicing LeetCode-style coding questions (the "Blind 75" set). It features an in-browser code editor (CodeMirror 6) with 31 selectable syntax themes, JavaScript/Python execution, Go/Java/Rust/C/C++ scaffold-only support, completion tracking via IndexedDB, a multi-palette dark/light theme system with optional editor-theme-driven app theming, a distraction-free Zen Mode, end-to-end encrypted chat (ECDH P-256 + AES-256-GCM), and collaborative Groups with timed coding sessions.
 
 ## Tech Stack
 
@@ -38,14 +38,21 @@ app/
 ├── globals.css                   # Tailwind directives + theme tokens (6 variants) + keyframes + base styles
 ├── actions/
 │   ├── auth.ts                   # Server Actions: signUp, signIn, signOut (username/password)
-│   └── progress.ts               # Server Actions: getProgress, syncProgress, bulkSyncProgress, saveSettings, etc.
-└── api/
-    └── auth/
-        └── session/
-            └── route.ts          # GET /api/auth/session — returns current user from JWT cookie (used by authStore)
+│   ├── progress.ts               # Server Actions: getProgress, syncProgress, bulkSyncProgress, saveSettings, etc.
+│   ├── chat.ts                   # Server Actions: createRoom, sendMessage, getMessages, listRooms, etc.
+│   └── groups.ts                 # Server Actions: createGroup, inviteToGroup, startGroupSession, submitSessionResult, etc.
+├── api/
+│   ├── auth/
+│   │   └── session/
+│   │       └── route.ts          # GET /api/auth/session — returns current user from JWT cookie (used by authStore)
+│   └── chat/
+│       ├── sse/
+│       │   └── route.ts          # GET /api/chat/sse — Server-Sent Events for real-time chat messages, group invitations, and session changes
+│       └── purge/
+│           └── route.ts          # POST /api/chat/purge — purge expired chat rooms
 proxy.ts                          # Next.js Proxy: optimistic cookie check for protected routes
 src/
-├── App.tsx                       # Root client component, hydrates stores, orchestrates layout
+├── App.tsx                       # Root client component, hydrates stores, orchestrates layout + group session integration
 ├── components/                   # Client components (all marked "use client")
 │   ├── AuthForms.tsx             # Sign-in / sign-up form (username + password), calls Server Actions
 │   ├── CodeEditor.tsx            # CodeMirror 6 wrapper with 31 selectable themes, dynamic theming + user-configurable extensions
@@ -53,17 +60,31 @@ src/
 │   ├── LanguageSelector.tsx      # Language tab selector (JS/Python/Go/Java active; Rust/C/C++ scaffolded)
 │   ├── OutputPanel.tsx           # Code execution output display
 │   ├── ProgressBar.tsx           # Completion progress indicator
-│   ├── QuestionCard.tsx          # Question display with numbered title + examples
+│   ├── QuestionCard.tsx          # Question display with numbered title + examples (optional onToggleComplete for session mode)
 │   ├── QuestionsModal.tsx        # All-questions table modal with filters/sort
 │   ├── SettingsModal.tsx         # Tabbed settings modal (Editor / Appearance / Account)
-│   └── WelcomeGate.tsx           # First-visit gate: sign in, sign up, or continue locally (guest)
+│   ├── Timer.tsx                 # Per-question stopwatch timer
+│   ├── WelcomeGate.tsx           # First-visit gate: sign in, sign up, or continue locally (guest)
+│   ├── ChatModal.tsx             # Right-side resizable drawer for encrypted chat
+│   ├── ChatPanel.tsx             # Chat room view: message list + input
+│   ├── ChatRoomList.tsx          # Room list sidebar inside ChatModal
+│   ├── ChatMessage.tsx           # Individual chat message bubble
+│   ├── ChatInput.tsx             # Chat message input field
+│   ├── GroupsModal.tsx           # Right-side resizable drawer for groups management
+│   ├── GroupDetail.tsx            # Group detail view: tabs (Members / Board / Chat), invite modal, start session, join session banner
+│   ├── GroupSession.tsx           # GroupSessionBanner (thin bar in main UI during active session) + SessionResultsModal
+│   └── GroupBoard.tsx             # Group stats: member stats table + session history
 ├── lib/
 │   ├── auth/
 │   │   ├── session.ts            # JWT encrypt/decrypt via jose, cookie create/delete/get (server-only)
 │   │   └── server.ts             # verifySession() / requireSession() helpers (server-only)
+│   ├── crypto/
+│   │   └── e2e.ts                # E2E encryption primitives: ECDH P-256 key gen, AES-256-GCM encrypt/decrypt, HKDF-SHA-256, key wrapping
+│   ├── chat/
+│   │   └── emitter.ts            # Server-side event emitter for SSE chat notifications
 │   └── db/
 │       ├── index.ts              # Drizzle client (neon-http driver)
-│       └── schema.ts             # Drizzle schema: users, sessions, userProgress, userSettings
+│       └── schema.ts             # Drizzle schema: users, sessions, userProgress, userSettings, chat tables, group tables
 ├── store/                        # Zustand stores + IndexedDB layer (all "use client")
 │   ├── themeStore.ts             # Theme mode (dark/light) + palette (emerald/ocean/amber)
 │   ├── editorStore.ts            # Editor preferences (font, indentation, feature toggles, editorTheme, adaptAppTheme, zenFullscreen)
@@ -71,6 +92,10 @@ src/
 │   ├── questionStore.ts          # Current question selection + randomQuestion
 │   ├── codeRunnerStore.ts        # Code execution state
 │   ├── authStore.ts              # Auth state: fetches /api/auth/session on hydrate, exposes user/isAuthenticated
+│   ├── chatStore.ts              # Chat state: rooms, messages, SSE connection, E2E encryption/decryption, unencrypted group room support
+│   ├── chatCryptoStore.ts        # ECDH key pair management (IndexedDB), DM key derivation, room key unwrapping
+│   ├── groupStore.ts             # Groups state: groups, invitations, group detail, active/live session, session results
+│   ├── timerStore.ts             # Per-question timer state
 │   └── db.ts                     # IndexedDB persistence functions
 ├── runners/                      # Language-specific code execution (all "use client")
 │   ├── javaRunner.ts             # Stub — Java not supported in browser (like Go)
@@ -92,8 +117,8 @@ src/
 The app uses Next.js App Router with a hybrid rendering strategy:
 - **Server components:** `app/layout.tsx` handles `<html>`, `<body>`, font loading, and metadata.
 - **Client components:** Everything under `src/` is marked `"use client"` since the app relies heavily on browser APIs (IndexedDB, CodeMirror, Pyodide, Fullscreen API).
-- **Server Actions:** `app/actions/auth.ts` (sign up/in/out) and `app/actions/progress.ts` (CRUD for user progress and settings). All Server Actions use `"use server"` and validate sessions via `verifySession()`.
-- **Route Handlers:** `app/api/auth/session/route.ts` — a single `GET` endpoint for client-side session hydration.
+- **Server Actions:** `app/actions/auth.ts` (sign up/in/out), `app/actions/progress.ts` (CRUD for user progress and settings), `app/actions/chat.ts` (room management, messaging, public keys), and `app/actions/groups.ts` (group CRUD, invitations, sessions, results). All Server Actions use `"use server"` and validate sessions via `verifySession()`.
+- **Route Handlers:** `app/api/auth/session/route.ts` (GET — client-side session hydration), `app/api/chat/sse/route.ts` (GET — Server-Sent Events for real-time chat, group invitations, and session changes), `app/api/chat/purge/route.ts` (POST — purge expired chat rooms).
 - **Path alias:** `@/*` maps to `./src/*` (configured in `tsconfig.json`).
 
 ### State Management
@@ -126,6 +151,33 @@ The theme system uses CSS custom properties with `[data-mode][data-palette]` att
 ### Zen Mode
 
 Zen Mode strips the UI down to just the code editor filling the viewport. Activated via the eye icon in the topbar, exited via Escape or the floating exit button. An optional "Fullscreen" toggle in Appearance settings uses the browser Fullscreen API for true fullscreen. Exiting fullscreen (via browser chrome or Esc) also exits zen mode.
+
+### Chat (E2E Encrypted)
+
+The app includes an end-to-end encrypted chat system for authenticated users. Opened via the message icon in the topbar; renders as a right-side resizable drawer (`ChatModal`).
+
+**Encryption:** ECDH P-256 key pairs are generated client-side and stored in IndexedDB (`chatCryptoStore`). DM rooms derive a shared AES-256-GCM key via ECDH + HKDF-SHA-256. Group chat rooms created by the Groups feature are **unencrypted** (plaintext stored in the `ciphertext` column with `iv = "none"`) since members join dynamically and proper key distribution would be too complex. The `chatStore` detects unencrypted group rooms via `isUnencryptedGroupRoom()` and skips encryption/decryption for them.
+
+**Real-time:** `app/api/chat/sse/route.ts` provides a Server-Sent Events endpoint. The client connects on chat hydration and receives `new_message`, `group_invitation`, and `group_session_changed` events. Polling intervals check for new messages, invitation count changes, and active session status changes.
+
+**Key files:** `src/lib/crypto/e2e.ts` (primitives), `src/store/chatCryptoStore.ts` (key management), `src/store/chatStore.ts` (rooms, messages, SSE), `app/actions/chat.ts` (server actions), `src/components/Chat*.tsx` (UI).
+
+### Groups
+
+Groups enable collaborative coding sessions. Authenticated users can create up to 5 groups and invite others by username. Opened via the Users icon in the topbar; renders as a right-side resizable drawer (`GroupsModal`).
+
+**Group sessions** are the core feature: the admin picks a question and timer duration, then starts a session. All members can join the session, which **takes over the main app view** — the same code editor, question card, and output panel the user normally works with. The session does **not** open a separate editor. Instead:
+
+1. `groupStore.liveSession` is set when a user joins (via `joinSession()`).
+2. `App.tsx` reads `liveSession` and overrides the displayed question to the session's question.
+3. A `GroupSessionBanner` renders below the main header showing: group name, question, countdown timer, submission count, Submit/End/Leave controls.
+4. The "All Questions", "Zen Mode", "Random Question", and "Mark Complete" buttons are hidden during a session since the question is locked.
+5. Submit calls `submitResult()` on the group store instead of saving locally.
+6. When the timer expires or the admin ends the session, a `SessionResultsModal` pops up showing the results table.
+
+**Invitations:** Users receive invitations visible in the Groups drawer. Accepting adds the user to the group and its auto-created chat room. SSE delivers `group_invitation` events for real-time notification badges.
+
+**Key files:** `app/actions/groups.ts` (13 server actions), `src/store/groupStore.ts` (state + `liveSession`), `src/components/GroupsModal.tsx` (drawer), `src/components/GroupDetail.tsx` (detail view + join banner), `src/components/GroupSession.tsx` (banner + results modal), `src/components/GroupBoard.tsx` (stats).
 
 ### CSS / Tailwind
 
@@ -176,12 +228,21 @@ Neon Serverless Postgres via `@neondatabase/serverless` + Drizzle ORM. Schema li
 | `sessions` | `id` (text PK), `user_id` FK → users, `expires_at`, `created_at` (reserved for future DB-backed sessions) |
 | `user_progress` | Per-user per-question progress: completed, attempts, revisits, best solution, language, time spent. Unique index on `(user_id, question_id)`. |
 | `user_settings` | Per-user JSON blobs for theme and editor preferences. `user_id` PK FK → users. |
+| `user_public_keys` | ECDH P-256 public keys for E2E chat encryption. `user_id` PK FK → users. |
+| `chat_rooms` | Chat rooms with type (`dm` or `group`), optional `encrypted_room_key`, `expires_at`. |
+| `chat_room_members` | Room membership with per-member `encrypted_room_key`. Composite PK `(room_id, user_id)`. |
+| `chat_messages` | Encrypted messages: `ciphertext`, `iv`, `sender_id`, `room_id`, `created_at`. |
+| `groups` | Group identity: `name`, `created_by`, linked `chat_room_id`, timestamps. |
+| `group_members` | Group membership with `admin`/`member` role. Composite PK `(group_id, user_id)`. |
+| `group_invitations` | Pending/accepted/declined invitations. Unique index on `(group_id, invitee_id)`. |
+| `group_sessions` | Timed coding sessions: `question_id`, `duration_secs`, `status` (active/completed), `started_at`. |
+| `group_session_results` | Per-user submission results per session: `completed`, `time_spent_secs`, `code`. Composite PK `(session_id, user_id)`. |
 
 **Schema changes:** Use `bunx drizzle-kit push` to push schema changes to Neon (no migration files). Config in `drizzle.config.ts`.
 
 ### IndexedDB Keys
 
-All keys are prefixed with `sighted75:` — `sighted75:completed`, `sighted75:theme`, `sighted75:editor` (includes editorTheme, adaptAppTheme, zenFullscreen), `sighted75:currentQuestion`, `sighted75:solution:{id}`.
+All keys are prefixed with `sighted75:` — `sighted75:completed`, `sighted75:theme`, `sighted75:editor` (includes editorTheme, adaptAppTheme, zenFullscreen), `sighted75:currentQuestion`, `sighted75:solution:{id}`, `sighted75:chat-keypair` (ECDH key pair for E2E chat).
 
 ### Typography
 
