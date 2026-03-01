@@ -2,7 +2,7 @@
 
 ## Project Overview
 
-Sighted 75 is a single-page React app for practicing LeetCode-style coding questions (the "Blind 75" set). It features an in-browser code editor (CodeMirror 6) with 31 selectable syntax themes, JavaScript/Python execution, Go/Java/Rust/C/C++ scaffold-only support, completion tracking via IndexedDB, a multi-palette dark/light theme system with optional editor-theme-driven app theming, a distraction-free Zen Mode, end-to-end encrypted chat (ECDH P-256 + AES-256-GCM), and collaborative Groups with timed coding sessions.
+Sighted 75 is a NextJs app for practicing LeetCode-style coding questions (the "Blind 75" set). It features an in-browser code editor (CodeMirror 6) with 31 selectable syntax themes, JavaScript/Python execution, Go/Java/Rust/C/C++ scaffold-only support, completion tracking via IndexedDB, a multi-palette dark/light theme system with optional editor-theme-driven app theming, a distraction-free Zen Mode, end-to-end encrypted chat (ECDH P-256 + AES-256-GCM), and collaborative Groups with timed coding sessions.
 
 ## Tech Stack
 
