@@ -1,0 +1,19 @@
+name: Deploy to Vercel
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  deploy:
+    name: Trigger Vercel Deploy
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger deploy hook
+        run: |
+          response=$(curl -s -o /dev/null -w "%{http_code}" -X POST "${{ secrets.VERCEL_DEPLOY_HOOK }}")
+          if [ "$response" -ne 200 ] && [ "$response" -ne 201 ]; then
+            echo "Deploy hook failed with status $response"
+            exit 1
+          fi
+          echo "Deploy triggered successfully (HTTP $response)"
