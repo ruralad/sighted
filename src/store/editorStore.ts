@@ -70,7 +70,7 @@ export interface EditorSettings {
 
 const EDITOR_KEY = "sighted75:editor";
 
-export const DEFAULT_EDITOR: EditorSettings = {
+const DEFAULT_EDITOR: EditorSettings = {
   fontSize: 13,
   fontFamily: "JetBrains Mono",
   lineHeight: 1.7,

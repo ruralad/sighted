@@ -20,13 +20,6 @@ export async function generateKeyPair(): Promise<CryptoKeyPair> {
   return crypto.subtle.generateKey(ECDH_PARAMS, true, ["deriveBits"]);
 }
 
-export async function generateSymmetricKey(): Promise<CryptoKey> {
-  return crypto.subtle.generateKey(
-    { name: "AES-GCM", length: AES_KEY_LENGTH },
-    true,
-    ["encrypt", "decrypt"],
-  );
-}
 
 // ── Key Export / Import ──────────────────────────────────────
 
@@ -56,13 +49,7 @@ export async function importPrivateKeyJwk(
   ]);
 }
 
-export async function exportSymmetricKeyRaw(
-  key: CryptoKey,
-): Promise<ArrayBuffer> {
-  return crypto.subtle.exportKey("raw", key);
-}
-
-export async function importSymmetricKeyRaw(
+async function importSymmetricKeyRaw(
   raw: ArrayBuffer,
 ): Promise<CryptoKey> {
   return crypto.subtle.importKey(
@@ -146,16 +133,7 @@ export async function decrypt(
   return new TextDecoder().decode(plaintextBuf);
 }
 
-// ── Envelope encryption (wrap/unwrap a symmetric key for a recipient) ──
-
-export async function wrapKey(
-  symmetricKey: CryptoKey,
-  wrappingKey: CryptoKey,
-): Promise<EncryptedPayload> {
-  const raw = await exportSymmetricKeyRaw(symmetricKey);
-  const rawStr = bufToBase64(raw);
-  return encrypt(wrappingKey, rawStr);
-}
+// ── Envelope encryption (unwrap a symmetric key from a recipient) ──
 
 export async function unwrapKey(
   payload: EncryptedPayload,
@@ -168,7 +146,7 @@ export async function unwrapKey(
 
 // ── Base64 helpers ───────────────────────────────────────────
 
-export function bufToBase64(buf: ArrayBuffer | Uint8Array): string {
+function bufToBase64(buf: ArrayBuffer | Uint8Array): string {
   const bytes = buf instanceof Uint8Array ? buf : new Uint8Array(buf);
   let binary = "";
   for (let i = 0; i < bytes.length; i++) {
@@ -177,7 +155,7 @@ export function bufToBase64(buf: ArrayBuffer | Uint8Array): string {
   return btoa(binary);
 }
 
-export function base64ToBuf(b64: string): ArrayBuffer {
+function base64ToBuf(b64: string): ArrayBuffer {
   const binary = atob(b64);
   const bytes = new Uint8Array(binary.length);
   for (let i = 0; i < binary.length; i++) {

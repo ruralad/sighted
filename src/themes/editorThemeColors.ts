@@ -7,7 +7,7 @@ import type { EditorThemeId } from "../store/editorStore";
  * Only the properties that differ from the base palette need to be specified;
  * they are applied as inline overrides on <html>.
  */
-export interface AppThemeOverride {
+interface AppThemeOverride {
   "--bg-deep": string;
   "--bg-primary": string;
   "--bg-surface": string;
@@ -77,7 +77,7 @@ function light(o: Omit<AppThemeOverride, keyof typeof LIGHT_SEMANTICS>): AppThem
   return { ...o, ...LIGHT_SEMANTICS };
 }
 
-export const EDITOR_THEME_COLORS: ThemeColorMap = {
+const EDITOR_THEME_COLORS: ThemeColorMap = {
   oneDark: dark({
     "--bg-deep": "#21252b",
     "--bg-primary": "#282c34",

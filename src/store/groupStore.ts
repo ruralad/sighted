@@ -26,9 +26,7 @@ import {
 
 export type {
   GroupInfo,
-  InvitationInfo,
   SessionInfo,
-  SessionResultInfo,
   BoardMemberStats,
   BoardSessionDetail,
 };

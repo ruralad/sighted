@@ -16,7 +16,7 @@ import {
 } from "../../app/actions/progress";
 import { useAuthStore } from "./authStore";
 
-export interface QuestionStats {
+interface QuestionStats {
   attempts: number;
   revisits: number;
   completedAt: string | null;

@@ -5,7 +5,7 @@ import { AuthForms } from "./AuthForms";
 
 const AUTH_CHOICE_KEY = "sighted75:auth-choice";
 
-export type AuthChoice = "local" | "authenticated" | null;
+type AuthChoice = "local" | "authenticated" | null;
 
 export function getAuthChoice(): AuthChoice {
   if (typeof window === "undefined") return null;

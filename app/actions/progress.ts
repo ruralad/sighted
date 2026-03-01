@@ -10,7 +10,7 @@ async function getUserId(): Promise<string | null> {
   return session?.userId ?? null;
 }
 
-export interface ProgressRow {
+interface ProgressRow {
   questionId: number;
   completed: boolean;
   completedAt: string | null;

@@ -80,8 +80,6 @@ src/
 │   │   └── server.ts             # verifySession() / requireSession() helpers (server-only)
 │   ├── crypto/
 │   │   └── e2e.ts                # E2E encryption primitives: ECDH P-256 key gen, AES-256-GCM encrypt/decrypt, HKDF-SHA-256, key wrapping
-│   ├── chat/
-│   │   └── emitter.ts            # Server-side event emitter for SSE chat notifications
 │   └── db/
 │       ├── index.ts              # Drizzle client (neon-http driver)
 │       └── schema.ts             # Drizzle schema: users, sessions, userProgress, userSettings, chat tables, group tables

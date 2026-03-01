@@ -55,13 +55,6 @@ export async function setCurrentQuestion(
   }
 }
 
-export async function getSolution(
-  questionId: number,
-): Promise<StoredSolution | null> {
-  const val = await get<StoredSolution>(solutionKey(questionId));
-  return val ?? null;
-}
-
 export async function saveSolution(
   questionId: number,
   language: Language,

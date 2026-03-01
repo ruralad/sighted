@@ -9,7 +9,7 @@ import {
   chatRoomMembers,
   chatMessages,
 } from "@/lib/db/schema";
-import { eq, and, lt, sql, ilike, ne } from "drizzle-orm";
+import { eq, and, sql, ilike, ne } from "drizzle-orm";
 
 async function requireUserId(): Promise<string> {
   const session = await verifySession();
@@ -35,19 +35,7 @@ export async function uploadPublicKey(
 
 }
 
-export async function getUserPublicKey(
-  userId: string,
-): Promise<{ keyId: string; publicKey: string } | null> {
-  await requireUserId();
 
-  const rows = await db
-    .select({ keyId: userPublicKeys.id, publicKey: userPublicKeys.publicKey })
-    .from(userPublicKeys)
-    .where(eq(userPublicKeys.userId, userId))
-    .limit(1);
-
-  return rows[0] ?? null;
-}
 
 // ── User Search ──────────────────────────────────────────────
 
@@ -104,40 +92,6 @@ export async function createDmRoom(
       joinedAt: now,
     },
   ]);
-
-  return roomId;
-}
-
-export async function createGroupRoom(
-  name: string,
-  memberIds: string[],
-  encryptedRoomKeys: Record<string, string>,
-  questionId?: number,
-): Promise<string> {
-  const userId = await requireUserId();
-  const roomId = crypto.randomUUID();
-  const now = new Date();
-  const expiresAt = new Date(now.getTime() + 24 * 60 * 60 * 1000);
-
-  await db.insert(chatRooms).values({
-    id: roomId,
-    type: "group",
-    name,
-    questionId: questionId ?? null,
-    createdBy: userId,
-    createdAt: now,
-    expiresAt,
-  });
-
-  const allMembers = [userId, ...memberIds.filter((id) => id !== userId)];
-  await db.insert(chatRoomMembers).values(
-    allMembers.map((uid) => ({
-      roomId,
-      userId: uid,
-      encryptedRoomKey: encryptedRoomKeys[uid] ?? null,
-      joinedAt: now,
-    })),
-  );
 
   return roomId;
 }
@@ -305,13 +259,3 @@ export async function getMessages(
   }));
 }
 
-// ── Purge ────────────────────────────────────────────────────
-
-export async function purgeExpired(): Promise<{ deletedRooms: number }> {
-  const result = await db
-    .delete(chatRooms)
-    .where(lt(chatRooms.expiresAt, new Date()))
-    .returning({ id: chatRooms.id });
-
-  return { deletedRooms: result.length };
-}

@@ -8,7 +8,7 @@ import { useAuthStore } from "./authStore";
 export type ThemeMode = "dark" | "light";
 export type ThemePalette = "emerald" | "ocean" | "amber";
 
-export interface ThemeState {
+interface ThemeState {
   mode: ThemeMode;
   palette: ThemePalette;
 }

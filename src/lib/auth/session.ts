@@ -14,7 +14,7 @@ export interface SessionPayload {
   expiresAt: string;
 }
 
-export async function encrypt(payload: SessionPayload): Promise<string> {
+async function encrypt(payload: SessionPayload): Promise<string> {
   return new SignJWT(payload as unknown as Record<string, unknown>)
     .setProtectedHeader({ alg: "HS256" })
     .setIssuedAt()
@@ -22,7 +22,7 @@ export async function encrypt(payload: SessionPayload): Promise<string> {
     .sign(ENCODED_KEY);
 }
 
-export async function decrypt(
+async function decrypt(
   token: string | undefined,
 ): Promise<SessionPayload | null> {
   if (!token) return null;
@@ -70,4 +70,3 @@ export async function getSession(): Promise<SessionPayload | null> {
   return decrypt(token);
 }
 
-export { COOKIE_NAME };
