@@ -19,6 +19,7 @@ import { OutputPanel } from "./components/OutputPanel";
 import { SettingsModal } from "./components/SettingsModal";
 import { QuestionsModal } from "./components/QuestionsModal";
 import { WelcomeGate, getAuthChoice, setAuthChoice } from "./components/WelcomeGate";
+import { signOut } from "../app/actions/auth";
 import { Timer } from "./components/Timer";
 import { ChatModal } from "./components/ChatModal";
 import { GroupsModal } from "./components/GroupsModal";
@@ -87,13 +88,17 @@ export function App() {
     }
   }, [authLoading, isAuthenticated]);
 
-  // Hydrate stores only after auth is resolved and welcome gate is dismissed
+  // Hydrate theme immediately so the WelcomeGate also renders with the correct theme
+  useEffect(() => {
+    hydrateTheme();
+  }, [hydrateTheme]);
+
+  // Hydrate remaining stores only after auth is resolved and welcome gate is dismissed
   useEffect(() => {
     if (!welcomeChecked || showWelcome) return;
-    hydrateTheme();
     hydrateCompletion();
     hydrateEditor();
-  }, [welcomeChecked, showWelcome, hydrateTheme, hydrateCompletion, hydrateEditor]);
+  }, [welcomeChecked, showWelcome, hydrateCompletion, hydrateEditor]);
 
   const editorTheme = useEditorStore((s) => s.settings.editorTheme);
   const adaptAppTheme = useEditorStore((s) => s.settings.adaptAppTheme);
@@ -301,6 +306,16 @@ function AppInner() {
     [clearResult],
   );
 
+  const handleSignOut = useCallback(async () => {
+    await signOut().catch(() => {});
+    window.location.reload();
+  }, []);
+
+  const handleSignIn = useCallback(() => {
+    localStorage.removeItem("sighted75:auth-choice");
+    window.location.reload();
+  }, []);
+
   const openSettings = useCallback(() => setShowSettings(true), []);
   const closeSettings = useCallback(() => setShowSettings(false), []);
   const openQuestions = useCallback(() => setShowQuestions(true), []);
@@ -431,31 +446,35 @@ function AppInner() {
               <Eye size={18} />
             </button>
           ) : null}
-          {isAuthenticated ? (
-            <button
-              className="relative flex items-center justify-center w-[34px] h-[34px] rounded-[var(--radius-md)] text-[var(--text-muted)] transition-[color,background-color] duration-200 ease-out cursor-pointer hover:text-[var(--text)] hover:bg-[var(--bg-surface)]"
-              onClick={openGroups}
-              aria-label="Groups"
-              title="Groups"
-            >
-              <Users size={18} />
-              {groupInvitationCount > 0 ? (
-                <span className="absolute -top-0.5 -right-0.5 flex items-center justify-center min-w-[16px] h-[16px] rounded-full bg-[var(--accent)] text-[var(--accent-text-on)] text-[9px] font-bold px-1 leading-none">
-                  {groupInvitationCount}
-                </span>
-              ) : null}
-            </button>
-          ) : null}
-          {isAuthenticated ? (
-            <button
-              className="flex items-center justify-center w-[34px] h-[34px] rounded-[var(--radius-md)] text-[var(--text-muted)] transition-[color,background-color] duration-200 ease-out cursor-pointer hover:text-[var(--text)] hover:bg-[var(--bg-surface)]"
-              onClick={openChat}
-              aria-label="Chat"
-              title="Encrypted Chat"
-            >
-              <MessageCircle size={18} />
-            </button>
-          ) : null}
+          <button
+            className={`relative flex items-center justify-center w-[34px] h-[34px] rounded-[var(--radius-md)] transition-[color,background-color] duration-200 ease-out ${
+              isAuthenticated
+                ? "text-[var(--text-muted)] cursor-pointer hover:text-[var(--text)] hover:bg-[var(--bg-surface)]"
+                : "text-[var(--text-muted)]/40 cursor-not-allowed"
+            }`}
+            onClick={isAuthenticated ? openGroups : undefined}
+            aria-label="Groups"
+            title={isAuthenticated ? "Groups" : "Sign in to use Groups"}
+          >
+            <Users size={18} />
+            {isAuthenticated && groupInvitationCount > 0 ? (
+              <span className="absolute -top-0.5 -right-0.5 flex items-center justify-center min-w-[16px] h-[16px] rounded-full bg-[var(--accent)] text-[var(--accent-text-on)] text-[9px] font-bold px-1 leading-none">
+                {groupInvitationCount}
+              </span>
+            ) : null}
+          </button>
+          <button
+            className={`flex items-center justify-center w-[34px] h-[34px] rounded-[var(--radius-md)] transition-[color,background-color] duration-200 ease-out ${
+              isAuthenticated
+                ? "text-[var(--text-muted)] cursor-pointer hover:text-[var(--text)] hover:bg-[var(--bg-surface)]"
+                : "text-[var(--text-muted)]/40 cursor-not-allowed"
+            }`}
+            onClick={isAuthenticated ? openChat : undefined}
+            aria-label="Chat"
+            title={isAuthenticated ? "Encrypted Chat" : "Sign in to use Chat"}
+          >
+            <MessageCircle size={18} />
+          </button>
           <button
             className="flex items-center justify-center w-[34px] h-[34px] rounded-[var(--radius-md)] text-[var(--text-muted)] transition-[color,background-color] duration-200 ease-out cursor-pointer hover:text-[var(--text)] hover:bg-[var(--bg-surface)] [&:hover_svg]:rotate-45 [&_svg]:transition-transform [&_svg]:duration-300 [&_svg]:ease-out"
             onClick={openSettings}
@@ -546,11 +565,28 @@ function AppInner() {
       {/* Footer */}
       <footer className="flex items-center justify-between px-5 h-[28px] bg-[var(--bg-primary)] border-t border-[var(--border)] shrink-0 transition-[background-color,border-color] duration-300">
         <span className="text-[11px] text-[var(--text-muted)] tabular-nums">v1.0.0</span>
-        <span className="text-[11px] text-[var(--text-muted)] truncate">
-          {isAuthenticated && authUser
-            ? <>Signed in as <span className="text-[var(--text-secondary)] font-medium">@{authUser.username}</span></>
-            : "Guest"}
-        </span>
+        {isAuthenticated && authUser ? (
+          <div className="flex items-center gap-2 truncate">
+            <span className="text-[11px] text-[var(--text-muted)]">
+              Signed in as <span className="text-[var(--text-secondary)] font-medium">@{authUser.username}</span>
+            </span>
+            <button
+              className="text-[11px] text-[var(--text-muted)] hover:text-[var(--red)] transition-colors duration-200"
+              onClick={handleSignOut}
+              aria-label="Sign out"
+            >
+              Sign out
+            </button>
+          </div>
+        ) : (
+          <button
+            className="text-[11px] text-[var(--text-muted)] hover:text-[var(--accent)] transition-colors duration-200"
+            onClick={handleSignIn}
+            aria-label="Sign in"
+          >
+            Sign in
+          </button>
+        )}
       </footer>
 
       <SettingsModal open={showSettings} onClose={closeSettings} />
